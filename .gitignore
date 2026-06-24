@@ -1,0 +1,21 @@
+# Meson / Ninja build output
+/build/
+/builddir/
+build-asan
+build-release
+build-valgrind
+
+/subprojects/*/
+!/subprojects/*.wrap
+
+*.o
+*.a
+*.so
+*.so.*
+
+compile_commands.json
+.cache/
+
+core
+core.*
+*.log
