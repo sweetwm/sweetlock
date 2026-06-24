@@ -1,27 +1,8 @@
 #include "locky/lock.h"
 #include "ext-session-lock-v1-client-protocol.h"
-#include "locky/buffer.h"
 #include "locky/log.h"
+#include "locky/render.h"
 #include <stdlib.h>
-
-static void commit_solid_frame(struct locky_output *output) {
-	struct locky_state *state = output->state;
-	int32_t scale = output->scale > 0 ? output->scale : 1;
-	int32_t width = (int32_t)output->width * scale;
-	int32_t height = (int32_t)output->height * scale;
-
-	struct wl_buffer *buffer = locky_buffer_create_solid(
-		state->shm, width, height, state->background);
-	if (buffer == NULL) {
-		locky_log(LOCKY_ERROR, "failed to create buffer for output");
-		return;
-	}
-
-	wl_surface_set_buffer_scale(output->surface, scale);
-	wl_surface_attach(output->surface, buffer, 0, 0);
-	wl_surface_damage_buffer(output->surface, 0, 0, width, height);
-	wl_surface_commit(output->surface);
-}
 
 static void lock_surface_handle_configure(void *data,
 	struct ext_session_lock_surface_v1 *lock_surface, uint32_t serial,
@@ -30,7 +11,7 @@ static void lock_surface_handle_configure(void *data,
 	output->width = width;
 	output->height = height;
 	ext_session_lock_surface_v1_ack_configure(lock_surface, serial);
-	commit_solid_frame(output);
+	locky_render_output(output);
 }
 
 static const struct ext_session_lock_surface_v1_listener lock_surface_listener =

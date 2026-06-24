@@ -1,6 +1,8 @@
 #include "locky/output.h"
 #include "ext-session-lock-v1-client-protocol.h"
+#include "locky/buffer.h"
 #include "locky/lock.h"
+#include "locky/render.h"
 #include <stdlib.h>
 
 static void output_handle_geometry(void *data, struct wl_output *wl_output,
@@ -31,7 +33,13 @@ static void output_handle_scale(
 	void *data, struct wl_output *wl_output, int32_t factor) {
 	(void)wl_output;
 	struct locky_output *output = data;
+	if (output->scale == factor) {
+		return;
+	}
 	output->scale = factor;
+	if (output->lock_surface != NULL && output->width != 0) {
+		locky_render_output(output);
+	}
 }
 
 static void output_handle_name(
@@ -72,6 +80,7 @@ void locky_output_create(struct locky_state *state,
 
 void locky_output_destroy(struct locky_output *output) {
 	wl_list_remove(&output->link);
+	locky_pool_destroy(output->buffers);
 	if (output->lock_surface != NULL) {
 		ext_session_lock_surface_v1_destroy(output->lock_surface);
 	}

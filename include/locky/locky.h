@@ -1,6 +1,7 @@
 #ifndef LOCKY_LOCKY_H
 #define LOCKY_LOCKY_H
 
+#include "locky/buffer.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include <wayland-client.h>
@@ -30,6 +31,8 @@ struct locky_output {
 
 	uint32_t width, height; // surface-local size from the last configure
 	int32_t scale;
+
+	struct locky_buffer buffers[2]; // double-buffered pool for this output
 
 	struct wl_list link;
 };
