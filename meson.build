@@ -13,6 +13,8 @@ project(
 
 cc = meson.get_compiler('c')
 
+add_project_arguments('-D_GNU_SOURCE', language: 'c')
+
 wayland_client = dependency('wayland-client', version: '>=1.20.0')
 wayland_protos = dependency('wayland-protocols', version: '>=1.25')
 wayland_scanner = dependency('wayland-scanner', version: '>=1.15.0', native: true)
@@ -47,10 +49,20 @@ foreach xml : client_protocols
 	protocols_src += wayland_scanner_client.process(xml)
 endforeach
 
+locky_inc = include_directories('include')
+
 executable(
 	'locky',
-	files('src/main.c'),
+	files(
+		'src/main.c',
+		'src/log.c',
+		'src/buffer.c',
+		'src/output.c',
+		'src/lock.c',
+		'src/registry.c',
+	),
 	protocols_src,
+	include_directories: locky_inc,
 	dependencies: [wayland_client],
 	install: true,
 )
