@@ -19,6 +19,7 @@ wayland_client = dependency('wayland-client', version: '>=1.20.0')
 wayland_protos = dependency('wayland-protocols', version: '>=1.25')
 wayland_scanner = dependency('wayland-scanner', version: '>=1.15.0', native: true)
 cairo = dependency('cairo')
+pangocairo = dependency('pangocairo')
 xkbcommon = dependency('xkbcommon')
 pam = cc.find_library('pam')
 
@@ -61,6 +62,7 @@ executable(
 		'src/log.c',
 		'src/buffer.c',
 		'src/render.c',
+		'src/ui/input.c',
 		'src/output.c',
 		'src/lock.c',
 		'src/seat.c',
@@ -73,7 +75,7 @@ executable(
 	),
 	protocols_src,
 	include_directories: locky_inc,
-	dependencies: [wayland_client, cairo, xkbcommon, pam],
+	dependencies: [wayland_client, cairo, pangocairo, xkbcommon, pam],
 	install: true,
 )
 

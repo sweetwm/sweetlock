@@ -1,6 +1,7 @@
 #include "locky/render.h"
 #include "locky/buffer.h"
 #include "locky/log.h"
+#include "locky/ui/input.h"
 #include <cairo.h>
 
 static void set_source_rgb(cairo_t *cairo, uint32_t color) {
@@ -44,6 +45,8 @@ void locky_render_output(struct locky_output *output) {
 	set_source_rgb(cairo, state->background);
 	cairo_set_operator(cairo, CAIRO_OPERATOR_SOURCE);
 	cairo_paint(cairo);
+	cairo_set_operator(cairo, CAIRO_OPERATOR_OVER);
+	locky_ui_draw_input(cairo, state, output->width, output->height);
 	cairo_surface_flush(buffer->cairo_surface);
 
 	set_opaque_region(output);
@@ -51,4 +54,13 @@ void locky_render_output(struct locky_output *output) {
 	wl_surface_attach(output->surface, buffer->wl_buffer, 0, 0);
 	wl_surface_damage_buffer(output->surface, 0, 0, width, height);
 	wl_surface_commit(output->surface);
+}
+
+void locky_render_all_outputs(struct locky_state *state) {
+	struct locky_output *output;
+	wl_list_for_each (output, &state->outputs, link) {
+		if (output->lock_surface != NULL && output->width != 0) {
+			locky_render_output(output);
+		}
+	}
 }

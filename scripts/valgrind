@@ -16,9 +16,22 @@ fi
 
 ninja -C build-valgrind
 
+set +e
+WAYLAND_DISPLAY=locky-valgrind-missing-display \
 valgrind \
 	--leak-check=full \
 	--show-leak-kinds=definite,possible \
 	--track-origins=yes \
 	--error-exitcode=125 \
-	./build-valgrind/sweets -V
+	./build-valgrind/locky
+status=$?
+set -e
+
+if [ "$status" -eq 125 ]; then
+	exit 125
+fi
+if [ "$status" -ne 1 ]; then
+	printf 'Expected locky to fail without a Wayland display; got %s.\n' \
+		"$status" >&2
+	exit "$status"
+fi

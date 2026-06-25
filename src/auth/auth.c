@@ -2,6 +2,7 @@
 #include "locky/comm.h"
 #include "locky/log.h"
 #include "locky/password.h"
+#include "locky/render.h"
 #include <unistd.h>
 
 bool locky_auth_init(void) {
@@ -21,6 +22,7 @@ void locky_auth_submit(struct locky_state *state) {
 	if (!locky_comm_write_request(&state->password)) {
 		state->auth_state = LOCKY_AUTH_INVALID;
 	}
+	locky_render_all_outputs(state);
 }
 
 int locky_auth_fd(void) {
@@ -43,6 +45,7 @@ void locky_auth_handle_reply(struct locky_state *state) {
 		locky_log(LOCKY_INFO, "authentication failed");
 		state->auth_state = LOCKY_AUTH_INVALID;
 		locky_password_clear(&state->password);
+		locky_render_all_outputs(state);
 	}
 }
 

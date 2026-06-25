@@ -17,6 +17,7 @@ struct locky_password {
 bool locky_password_init(struct locky_password *pw);
 void locky_password_clear(struct locky_password *pw);
 void locky_password_finish(struct locky_password *pw);
+size_t locky_password_length(const struct locky_password *pw);
 
 // Route a key press into the password buffer; never unlocks
 void locky_keyboard_handle_key(
