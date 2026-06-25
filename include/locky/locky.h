@@ -30,6 +30,7 @@ struct locky_state {
 	enum locky_auth_state auth_state;
 
 	uint32_t background; // 0x00RRGGBB, opaque
+	uint64_t started_msec;
 	bool locked;
 	bool finished;
 	bool running;

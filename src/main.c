@@ -7,6 +7,7 @@
 #include "locky/password.h"
 #include "locky/registry.h"
 #include "locky/seat.h"
+#include "locky/time.h"
 #include <errno.h>
 #include <fcntl.h>
 #include <poll.h>
@@ -130,11 +131,13 @@ static bool run_event_loop(struct locky_state *state) {
 int main(void) {
 	locky_log_init(LOCKY_INFO);
 
+	struct locky_state state = {0};
+	state.started_msec = locky_time_msec();
+
 	if (!locky_auth_init()) {
 		return 1;
 	}
 
-	struct locky_state state = {0};
 	state.background = DEFAULT_BACKGROUND;
 	wl_list_init(&state.outputs);
 	wl_list_init(&state.seats);

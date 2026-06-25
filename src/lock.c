@@ -2,6 +2,8 @@
 #include "ext-session-lock-v1-client-protocol.h"
 #include "locky/log.h"
 #include "locky/render.h"
+#include "locky/time.h"
+#include <inttypes.h>
 #include <stdlib.h>
 
 static void lock_surface_handle_configure(void *data,
@@ -39,6 +41,12 @@ static void lock_handle_locked(void *data, struct ext_session_lock_v1 *lock) {
 	struct locky_state *state = data;
 	state->locked = true;
 	locky_log(LOCKY_INFO, "session locked");
+
+	uint64_t now = locky_time_msec();
+	if (state->started_msec != 0 && now >= state->started_msec) {
+		locky_log(LOCKY_INFO, "lock speed: %" PRIu64 " ms",
+			now - state->started_msec);
+	}
 }
 
 static void lock_handle_finished(void *data, struct ext_session_lock_v1 *lock) {

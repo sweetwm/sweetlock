@@ -68,6 +68,7 @@ executable(
 		'src/seat.c',
 		'src/password.c',
 		'src/unicode.c',
+		'src/time.c',
 		'src/registry.c',
 		'src/auth/auth.c',
 		'src/auth/comm.c',
