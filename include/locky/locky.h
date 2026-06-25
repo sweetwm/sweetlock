@@ -2,6 +2,8 @@
 #define LOCKY_LOCKY_H
 
 #include "locky/buffer.h"
+#include "locky/password.h"
+#include "locky/seat.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include <wayland-client.h>
@@ -14,6 +16,10 @@ struct locky_state {
 	struct ext_session_lock_manager_v1 *lock_manager;
 	struct ext_session_lock_v1 *lock;
 	struct wl_list outputs; // locky_output.link
+	struct wl_list seats;	// locky_seat.link
+
+	struct locky_xkb xkb;
+	struct locky_password password;
 
 	uint32_t background; // 0x00RRGGBB, opaque
 	bool locked;

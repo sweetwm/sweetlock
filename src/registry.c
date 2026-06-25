@@ -1,6 +1,7 @@
 #include "locky/registry.h"
 #include "ext-session-lock-v1-client-protocol.h"
 #include "locky/output.h"
+#include "locky/seat.h"
 #include <string.h>
 
 static void handle_global(void *data, struct wl_registry *registry,
@@ -20,6 +21,8 @@ static void handle_global(void *data, struct wl_registry *registry,
 			&ext_session_lock_manager_v1_interface, 1);
 	} else if (strcmp(interface, wl_output_interface.name) == 0) {
 		locky_output_create(state, registry, name, version);
+	} else if (strcmp(interface, wl_seat_interface.name) == 0) {
+		locky_seat_create(state, registry, name, version);
 	}
 }
 
@@ -27,11 +30,20 @@ static void handle_global_remove(
 	void *data, struct wl_registry *registry, uint32_t name) {
 	(void)registry;
 	struct locky_state *state = data;
-	struct locky_output *output, *tmp;
-	wl_list_for_each_safe (output, tmp, &state->outputs, link) {
+
+	struct locky_output *output, *otmp;
+	wl_list_for_each_safe (output, otmp, &state->outputs, link) {
 		if (output->global_name == name) {
 			locky_output_destroy(output);
-			break;
+			return;
+		}
+	}
+
+	struct locky_seat *seat, *stmp;
+	wl_list_for_each_safe (seat, stmp, &state->seats, link) {
+		if (seat->global_name == name) {
+			locky_seat_destroy(seat);
+			return;
 		}
 	}
 }

@@ -19,6 +19,7 @@ wayland_client = dependency('wayland-client', version: '>=1.20.0')
 wayland_protos = dependency('wayland-protocols', version: '>=1.25')
 wayland_scanner = dependency('wayland-scanner', version: '>=1.15.0', native: true)
 cairo = dependency('cairo')
+xkbcommon = dependency('xkbcommon')
 
 wayland_scanner_prog = find_program(
 	wayland_scanner.get_variable('wayland_scanner'),
@@ -61,10 +62,13 @@ executable(
 		'src/render.c',
 		'src/output.c',
 		'src/lock.c',
+		'src/seat.c',
+		'src/password.c',
+		'src/unicode.c',
 		'src/registry.c',
 	),
 	protocols_src,
 	include_directories: locky_inc,
-	dependencies: [wayland_client, cairo],
+	dependencies: [wayland_client, cairo, xkbcommon],
 	install: true,
 )

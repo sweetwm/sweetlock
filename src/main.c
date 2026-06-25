@@ -3,7 +3,9 @@
 #include "locky/locky.h"
 #include "locky/log.h"
 #include "locky/output.h"
+#include "locky/password.h"
 #include "locky/registry.h"
+#include "locky/seat.h"
 #include <errno.h>
 #include <fcntl.h>
 #include <poll.h>
@@ -49,6 +51,13 @@ static void destroy_outputs(struct locky_state *state) {
 	struct locky_output *output, *tmp;
 	wl_list_for_each_safe (output, tmp, &state->outputs, link) {
 		locky_output_destroy(output);
+	}
+}
+
+static void destroy_seats(struct locky_state *state) {
+	struct locky_seat *seat, *tmp;
+	wl_list_for_each_safe (seat, tmp, &state->seats, link) {
+		locky_seat_destroy(seat);
 	}
 }
 
@@ -115,6 +124,7 @@ int main(void) {
 	struct locky_state state = {0};
 	state.background = DEFAULT_BACKGROUND;
 	wl_list_init(&state.outputs);
+	wl_list_init(&state.seats);
 
 	state.display = wl_display_connect(NULL);
 	if (state.display == NULL) {
@@ -132,6 +142,13 @@ int main(void) {
 		state.lock_manager == NULL) {
 		locky_log(
 			LOCKY_ERROR, "compositor is missing required globals");
+		goto cleanup;
+	}
+
+	if (!locky_xkb_init(&state.xkb)) {
+		goto cleanup;
+	}
+	if (!locky_password_init(&state.password)) {
 		goto cleanup;
 	}
 
@@ -153,6 +170,9 @@ release:
 
 cleanup:
 	destroy_outputs(&state);
+	destroy_seats(&state);
+	locky_password_finish(&state.password);
+	locky_xkb_finish(&state.xkb);
 	if (state.lock_manager != NULL) {
 		ext_session_lock_manager_v1_destroy(state.lock_manager);
 	}
