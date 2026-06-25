@@ -1,4 +1,5 @@
 #include "locky/password.h"
+#include "locky/auth.h"
 #include "locky/locky.h"
 #include "locky/log.h"
 #include "locky/unicode.h"
@@ -90,10 +91,7 @@ void locky_keyboard_handle_key(
 	switch (keysym) {
 	case XKB_KEY_KP_Enter:
 	case XKB_KEY_Return:
-		// TODO: buffer to PAM, must never unlock here
-		locky_log(
-			LOCKY_INFO, "password submitted (auth not yet wired)");
-		locky_password_clear(pw);
+		locky_auth_submit(state);
 		break;
 	case XKB_KEY_BackSpace:
 	case XKB_KEY_Delete:

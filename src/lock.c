@@ -69,10 +69,20 @@ void locky_lock_release(struct locky_state *state) {
 	if (state->lock == NULL) {
 		return;
 	}
-	if (state->locked && !state->finished) {
+
+	if (state->finished) {
+		if (state->locked) {
+			ext_session_lock_v1_unlock_and_destroy(state->lock);
+		} else {
+			ext_session_lock_v1_destroy(state->lock);
+		}
+	} else if (state->unlock && state->locked) {
 		ext_session_lock_v1_unlock_and_destroy(state->lock);
-	} else {
+	} else if (!state->locked) {
 		ext_session_lock_v1_destroy(state->lock);
+	} else {
+		return;
 	}
+
 	state->lock = NULL;
 }

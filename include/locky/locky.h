@@ -8,6 +8,13 @@
 #include <stdint.h>
 #include <wayland-client.h>
 
+// Authentication attempt state
+enum locky_auth_state {
+	LOCKY_AUTH_IDLE,
+	LOCKY_AUTH_VALIDATING,
+	LOCKY_AUTH_INVALID,
+};
+
 struct locky_state {
 	struct wl_display *display;
 	struct wl_registry *registry;
@@ -20,11 +27,13 @@ struct locky_state {
 
 	struct locky_xkb xkb;
 	struct locky_password password;
+	enum locky_auth_state auth_state;
 
 	uint32_t background; // 0x00RRGGBB, opaque
 	bool locked;
 	bool finished;
 	bool running;
+	bool unlock; // set only on a successful PAM authentication
 };
 
 struct locky_output {

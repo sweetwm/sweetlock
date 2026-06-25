@@ -1,4 +1,5 @@
 #include "ext-session-lock-v1-client-protocol.h"
+#include "locky/auth.h"
 #include "locky/lock.h"
 #include "locky/locky.h"
 #include "locky/log.h"
@@ -61,10 +62,14 @@ static void destroy_seats(struct locky_state *state) {
 	}
 }
 
+enum { FD_WAYLAND, FD_SIGNAL, FD_AUTH, FD_COUNT };
+
 static bool run_event_loop(struct locky_state *state) {
-	struct pollfd fds[2] = {
-		{.fd = wl_display_get_fd(state->display), .events = POLLIN},
-		{.fd = signal_fds[0], .events = POLLIN},
+	struct pollfd fds[FD_COUNT] = {
+		[FD_WAYLAND] = {.fd = wl_display_get_fd(state->display),
+			.events = POLLIN},
+		[FD_SIGNAL] = {.fd = signal_fds[0], .events = POLLIN},
+		[FD_AUTH] = {.fd = locky_auth_fd(), .events = POLLIN},
 	};
 
 	state->running = true;
@@ -83,7 +88,7 @@ static bool run_event_loop(struct locky_state *state) {
 			return false;
 		}
 
-		if (poll(fds, 2, -1) < 0) {
+		if (poll(fds, FD_COUNT, -1) < 0) {
 			wl_display_cancel_read(state->display);
 			if (errno == EINTR) {
 				continue;
@@ -92,7 +97,7 @@ static bool run_event_loop(struct locky_state *state) {
 			return false;
 		}
 
-		if (fds[0].revents & POLLIN) {
+		if (fds[FD_WAYLAND].revents & POLLIN) {
 			if (wl_display_read_events(state->display) < 0) {
 				locky_log(LOCKY_ERROR, "read_events failed");
 				return false;
@@ -101,13 +106,17 @@ static bool run_event_loop(struct locky_state *state) {
 			wl_display_cancel_read(state->display);
 		}
 
-		if (fds[1].revents & POLLIN) {
+		if (fds[FD_SIGNAL].revents & POLLIN) {
 			char buf[16];
 			while (read(signal_fds[0], buf, sizeof(buf)) > 0) {
 				// drain the pipe
 			}
 			locky_log(LOCKY_INFO, "signal received, shutting down");
 			state->running = false;
+		}
+
+		if (fds[FD_AUTH].revents & (POLLIN | POLLHUP | POLLERR)) {
+			locky_auth_handle_reply(state);
 		}
 
 		if (wl_display_dispatch_pending(state->display) < 0) {
@@ -121,6 +130,10 @@ static bool run_event_loop(struct locky_state *state) {
 int main(void) {
 	locky_log_init(LOCKY_INFO);
 
+	if (!locky_auth_init()) {
+		return 1;
+	}
+
 	struct locky_state state = {0};
 	state.background = DEFAULT_BACKGROUND;
 	wl_list_init(&state.outputs);
@@ -129,6 +142,7 @@ int main(void) {
 	state.display = wl_display_connect(NULL);
 	if (state.display == NULL) {
 		locky_log(LOCKY_ERROR, "failed to connect to wayland display");
+		locky_auth_finish();
 		return 1;
 	}
 
@@ -171,6 +185,7 @@ release:
 cleanup:
 	destroy_outputs(&state);
 	destroy_seats(&state);
+	locky_auth_finish();
 	locky_password_finish(&state.password);
 	locky_xkb_finish(&state.xkb);
 	if (state.lock_manager != NULL) {
