@@ -1,6 +1,7 @@
 #include "locky/render.h"
 #include "locky/buffer.h"
 #include "locky/log.h"
+#include "locky/ui/clock.h"
 #include "locky/ui/input.h"
 #include <cairo.h>
 
@@ -46,6 +47,7 @@ void locky_render_output(struct locky_output *output) {
 	cairo_set_operator(cairo, CAIRO_OPERATOR_SOURCE);
 	cairo_paint(cairo);
 	cairo_set_operator(cairo, CAIRO_OPERATOR_OVER);
+	locky_ui_draw_clock(cairo, output->width);
 	locky_ui_draw_input(cairo, state, output->width, output->height);
 	cairo_surface_flush(buffer->cairo_surface);
 

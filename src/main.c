@@ -6,8 +6,10 @@
 #include "locky/output.h"
 #include "locky/password.h"
 #include "locky/registry.h"
+#include "locky/render.h"
 #include "locky/seat.h"
 #include "locky/time.h"
+#include "locky/timer.h"
 #include <errno.h>
 #include <fcntl.h>
 #include <poll.h>
@@ -63,7 +65,7 @@ static void destroy_seats(struct locky_state *state) {
 	}
 }
 
-enum { FD_WAYLAND, FD_SIGNAL, FD_AUTH, FD_COUNT };
+enum { FD_WAYLAND, FD_SIGNAL, FD_AUTH, FD_CLOCK, FD_COUNT };
 
 static bool run_event_loop(struct locky_state *state) {
 	struct pollfd fds[FD_COUNT] = {
@@ -71,6 +73,7 @@ static bool run_event_loop(struct locky_state *state) {
 			.events = POLLIN},
 		[FD_SIGNAL] = {.fd = signal_fds[0], .events = POLLIN},
 		[FD_AUTH] = {.fd = locky_auth_fd(), .events = POLLIN},
+		[FD_CLOCK] = {.fd = state->clock_timer_fd, .events = POLLIN},
 	};
 
 	state->running = true;
@@ -120,6 +123,11 @@ static bool run_event_loop(struct locky_state *state) {
 			locky_auth_handle_reply(state);
 		}
 
+		if (fds[FD_CLOCK].revents & (POLLIN | POLLHUP | POLLERR)) {
+			locky_minute_timer_drain(state->clock_timer_fd);
+			locky_render_all_outputs(state);
+		}
+
 		if (wl_display_dispatch_pending(state->display) < 0) {
 			locky_log(LOCKY_ERROR, "dispatch_pending failed");
 			return false;
@@ -133,6 +141,7 @@ int main(void) {
 
 	struct locky_state state = {0};
 	state.started_msec = locky_time_msec();
+	state.clock_timer_fd = -1;
 
 	if (!locky_auth_init()) {
 		return 1;
@@ -174,6 +183,10 @@ int main(void) {
 	}
 	create_lock_surfaces(&state);
 
+	if (!locky_minute_timer_init(&state.clock_timer_fd)) {
+		locky_log(LOCKY_INFO, "clock timer disabled");
+	}
+
 	if (!install_signal_handlers()) {
 		locky_log(LOCKY_ERROR, "failed to install signal handlers");
 		goto release;
@@ -203,6 +216,7 @@ cleanup:
 	if (state.registry != NULL) {
 		wl_registry_destroy(state.registry);
 	}
+	locky_minute_timer_finish(&state.clock_timer_fd);
 
 disconnect:
 	if (signal_fds[0] >= 0) {

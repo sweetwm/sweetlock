@@ -31,6 +31,7 @@ struct locky_state {
 
 	uint32_t background; // 0x00RRGGBB, opaque
 	uint64_t started_msec;
+	int clock_timer_fd;
 	bool locked;
 	bool finished;
 	bool running;
