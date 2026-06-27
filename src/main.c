@@ -10,6 +10,7 @@
 #include "locky/seat.h"
 #include "locky/time.h"
 #include "locky/timer.h"
+#include "locky/user.h"
 #include <errno.h>
 #include <fcntl.h>
 #include <poll.h>
@@ -148,6 +149,7 @@ int main(void) {
 	}
 
 	state.background = DEFAULT_BACKGROUND;
+	locky_user_init(&state);
 	wl_list_init(&state.outputs);
 	wl_list_init(&state.seats);
 

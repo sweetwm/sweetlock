@@ -3,6 +3,7 @@
 #include "locky/log.h"
 #include "locky/ui/clock.h"
 #include "locky/ui/input.h"
+#include "locky/ui/user.h"
 #include <cairo.h>
 
 static void set_source_rgb(cairo_t *cairo, uint32_t color) {
@@ -48,6 +49,7 @@ void locky_render_output(struct locky_output *output) {
 	cairo_paint(cairo);
 	cairo_set_operator(cairo, CAIRO_OPERATOR_OVER);
 	locky_ui_draw_clock(cairo, output->width);
+	locky_ui_draw_user(cairo, state, output->width, output->height);
 	locky_ui_draw_input(cairo, state, output->width, output->height);
 	cairo_surface_flush(buffer->cairo_surface);
 

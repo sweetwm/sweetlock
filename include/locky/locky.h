@@ -8,6 +8,8 @@
 #include <stdint.h>
 #include <wayland-client.h>
 
+#define LOCKY_USERNAME_MAX 128
+
 // Authentication attempt state
 enum locky_auth_state {
 	LOCKY_AUTH_IDLE,
@@ -28,6 +30,7 @@ struct locky_state {
 	struct locky_xkb xkb;
 	struct locky_password password;
 	enum locky_auth_state auth_state;
+	char username[LOCKY_USERNAME_MAX];
 
 	uint32_t background; // 0x00RRGGBB, opaque
 	uint64_t started_msec;
