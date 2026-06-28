@@ -8,14 +8,16 @@ It aims for a polished default look with a tiny set of configuration options.
 
 ## Status
 
-Early development. The current build is a minimal bootstrap that connects to the
-Wayland display and exits.
+Early development, but functional end to end: Locky acquires the Wayland
+session lock, draws the default clock/user/password UI, accepts keyboard input,
+authenticates with PAM, and unlocks only after successful authentication.
 
 ## Building
 
 ```sh
 meson setup build
 ninja -C build
+meson test -C build
 ```
 
 ## License

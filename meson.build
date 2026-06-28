@@ -61,6 +61,8 @@ executable(
 	files(
 		'src/main.c',
 		'src/log.c',
+		'src/image.c',
+		'src/background.c',
 		'src/buffer.c',
 		'src/render.c',
 		'src/ui/clock.c',
@@ -116,6 +118,30 @@ test_password = executable(
 	dependencies: [wayland_client, cairo, xkbcommon],
 )
 
+test_background = executable(
+	'test_background',
+	files(
+		'tests/test_background.c',
+		'src/background.c',
+		'src/image.c',
+		'src/log.c',
+	),
+	include_directories: locky_inc,
+	dependencies: [wayland_client, cairo, gdk_pixbuf],
+)
+
+test_image = executable(
+	'test_image',
+	files(
+		'tests/test_image.c',
+		'src/image.c',
+	),
+	include_directories: locky_inc,
+	dependencies: [cairo, gdk_pixbuf],
+)
+
 test('unicode', test_unicode)
 test('layout', test_layout)
 test('password', test_password)
+test('background', test_background)
+test('image', test_image)

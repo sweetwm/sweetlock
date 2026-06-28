@@ -1,17 +1,11 @@
 #include "locky/render.h"
+#include "locky/background.h"
 #include "locky/buffer.h"
 #include "locky/log.h"
 #include "locky/ui/clock.h"
 #include "locky/ui/input.h"
 #include "locky/ui/user.h"
 #include <cairo.h>
-
-static void set_source_rgb(cairo_t *cairo, uint32_t color) {
-	double r = ((color >> 16) & 0xFF) / 255.0;
-	double g = ((color >> 8) & 0xFF) / 255.0;
-	double b = (color & 0xFF) / 255.0;
-	cairo_set_source_rgb(cairo, r, g, b);
-}
 
 static void set_opaque_region(struct locky_output *output) {
 	struct wl_region *region =
@@ -44,10 +38,7 @@ void locky_render_output(struct locky_output *output) {
 	cairo_identity_matrix(cairo);
 	cairo_scale(cairo, scale, scale); // draw in logical coordinates
 
-	set_source_rgb(cairo, state->background);
-	cairo_set_operator(cairo, CAIRO_OPERATOR_SOURCE);
-	cairo_paint(cairo);
-	cairo_set_operator(cairo, CAIRO_OPERATOR_OVER);
+	locky_background_draw(cairo, state, output->width, output->height);
 	locky_ui_draw_clock(cairo, output->width);
 	locky_ui_draw_user(cairo, state, output->width, output->height);
 	locky_ui_draw_input(cairo, state, output->width, output->height);

@@ -32,6 +32,7 @@ struct locky_state {
 	enum locky_auth_state auth_state;
 	char username[LOCKY_USERNAME_MAX];
 	cairo_surface_t *avatar_surface;
+	cairo_surface_t *background_surface;
 
 	uint32_t background; // 0x00RRGGBB, opaque
 	uint64_t started_msec;

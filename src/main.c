@@ -1,5 +1,6 @@
 #include "ext-session-lock-v1-client-protocol.h"
 #include "locky/auth.h"
+#include "locky/background.h"
 #include "locky/lock.h"
 #include "locky/locky.h"
 #include "locky/log.h"
@@ -149,6 +150,7 @@ int main(void) {
 	}
 
 	state.background = DEFAULT_BACKGROUND;
+	locky_background_init(&state);
 	locky_user_init(&state);
 	wl_list_init(&state.outputs);
 	wl_list_init(&state.seats);
@@ -156,6 +158,7 @@ int main(void) {
 	state.display = wl_display_connect(NULL);
 	if (state.display == NULL) {
 		locky_log(LOCKY_ERROR, "failed to connect to wayland display");
+		locky_background_finish(&state);
 		locky_user_finish(&state);
 		locky_auth_finish();
 		return 1;
@@ -221,9 +224,11 @@ cleanup:
 	}
 	locky_minute_timer_finish(&state.clock_timer_fd);
 	locky_user_finish(&state);
+	locky_background_finish(&state);
 
 disconnect:
 	locky_user_finish(&state);
+	locky_background_finish(&state);
 	if (signal_fds[0] >= 0) {
 		close(signal_fds[0]);
 	}
