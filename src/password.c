@@ -84,8 +84,9 @@ static void password_backspace(struct locky_password *pw) {
 	if (pw->len == 0) {
 		return;
 	}
+	size_t old_len = pw->len;
 	pw->len -= (size_t)utf8_last_size(pw->buffer);
-	pw->buffer[pw->len] = '\0';
+	explicit_bzero(&pw->buffer[pw->len], old_len - pw->len + 1);
 }
 
 void locky_keyboard_handle_key(

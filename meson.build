@@ -90,3 +90,32 @@ install_data(
 	'pam/locky',
 	install_dir: get_option('sysconfdir') / 'pam.d',
 )
+
+test_unicode = executable(
+	'test_unicode',
+	files('tests/test_unicode.c', 'src/unicode.c'),
+	include_directories: locky_inc,
+)
+
+test_layout = executable(
+	'test_layout',
+	files('tests/test_layout.c', 'src/ui/layout.c'),
+	include_directories: locky_inc,
+	dependencies: cc.find_library('m'),
+)
+
+test_password = executable(
+	'test_password',
+	files(
+		'tests/test_password.c',
+		'src/password.c',
+		'src/unicode.c',
+		'src/log.c',
+	),
+	include_directories: locky_inc,
+	dependencies: [wayland_client, cairo, xkbcommon],
+)
+
+test('unicode', test_unicode)
+test('layout', test_layout)
+test('password', test_password)
