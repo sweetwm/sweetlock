@@ -1,24 +1,12 @@
 #include "locky/ui/input.h"
 #include "locky/password.h"
+#include "locky/ui/layout.h"
 #include <pango/pangocairo.h>
 
-#define INPUT_WIDTH 310.0
-#define INPUT_HEIGHT 54.0
 #define INPUT_RADIUS 8.0
-#define INPUT_MARGIN 32.0
 #define INPUT_PAD_X 18.0
 #define DOT_RADIUS 4.0
 #define DOT_GAP 14.0
-
-static double clamp(double value, double min, double max) {
-	if (value < min) {
-		return min;
-	}
-	if (value > max) {
-		return max;
-	}
-	return value;
-}
 
 static void set_source_rgba(cairo_t *cairo, uint32_t color, double alpha) {
 	double r = ((color >> 16) & 0xFF) / 255.0;
@@ -75,13 +63,13 @@ static void draw_dots(
 
 void locky_ui_draw_input(cairo_t *cairo, struct locky_state *state,
 	uint32_t width, uint32_t height) {
-	double input_width =
-		clamp((double)width - INPUT_MARGIN * 2.0, 180.0, INPUT_WIDTH);
-	double x = ((double)width - input_width) / 2.0;
-	double y = ((double)height - INPUT_HEIGHT) / 2.0;
+	struct locky_ui_layout layout = {0};
+	locky_ui_layout_build(width, height, &layout);
+	double x = layout.input_x;
+	double y = layout.input_y;
 
-	rounded_rect(cairo, x, y, input_width, INPUT_HEIGHT);
-	set_source_rgba(cairo, 0x4A4564, 0.62);
+	rounded_rect(cairo, x, y, layout.input_width, layout.input_height);
+	set_source_rgba(cairo, 0x4A4564, 0.66);
 	cairo_fill_preserve(cairo);
 
 	uint32_t border = 0xFFFFFF;
@@ -98,8 +86,8 @@ void locky_ui_draw_input(cairo_t *cairo, struct locky_state *state,
 	cairo_stroke(cairo);
 
 	double text_x = x + INPUT_PAD_X;
-	double text_y = y + INPUT_HEIGHT / 2.0;
-	double text_width = input_width - INPUT_PAD_X * 2.0;
+	double text_y = y + layout.input_height / 2.0;
+	double text_width = layout.input_width - INPUT_PAD_X * 2.0;
 	size_t password_len = locky_password_length(&state->password);
 
 	if (state->auth_state == LOCKY_AUTH_VALIDATING) {

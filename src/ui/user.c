@@ -1,15 +1,6 @@
 #include "locky/ui/user.h"
+#include "locky/ui/layout.h"
 #include <pango/pangocairo.h>
-
-#define INPUT_HEIGHT 54.0
-#define AVATAR_SIZE 112.0
-#define AVATAR_GAP 30.0
-#define NAME_GAP 28.0
-#define NAME_WIDTH 360.0
-
-static double input_y(uint32_t height) {
-	return ((double)height - INPUT_HEIGHT) / 2.0;
-}
 
 static void set_source_rgba(cairo_t *cairo, uint32_t color, double alpha) {
 	double r = ((color >> 16) & 0xFF) / 255.0;
@@ -30,22 +21,22 @@ static void draw_avatar_icon(cairo_t *cairo, double cx, double cy) {
 	cairo_stroke(cairo);
 }
 
-static void draw_avatar_image(
-	cairo_t *cairo, cairo_surface_t *surface, double cx, double cy) {
+static void draw_avatar_image(cairo_t *cairo, cairo_surface_t *surface,
+	double cx, double cy, double size) {
 	double source_width = cairo_image_surface_get_width(surface);
 	double source_height = cairo_image_surface_get_height(surface);
 	if (source_width <= 0.0 || source_height <= 0.0) {
 		return;
 	}
 
-	double scale_x = AVATAR_SIZE / source_width;
-	double scale_y = AVATAR_SIZE / source_height;
+	double scale_x = size / source_width;
+	double scale_y = size / source_height;
 	double scale = scale_x > scale_y ? scale_x : scale_y;
 	double draw_width = source_width * scale;
 	double draw_height = source_height * scale;
 
 	cairo_save(cairo);
-	cairo_arc(cairo, cx, cy, AVATAR_SIZE / 2.0, 0.0, 6.28318530718);
+	cairo_arc(cairo, cx, cy, size / 2.0, 0.0, 6.28318530718);
 	cairo_clip(cairo);
 	cairo_translate(cairo, cx - draw_width / 2.0, cy - draw_height / 2.0);
 	cairo_scale(cairo, scale, scale);
@@ -54,10 +45,8 @@ static void draw_avatar_image(
 	cairo_restore(cairo);
 }
 
-static void draw_name(
-	cairo_t *cairo, const char *name, double y, uint32_t width) {
-	double label_width =
-		(double)width < NAME_WIDTH ? (double)width : NAME_WIDTH;
+static void draw_name(cairo_t *cairo, const char *name, double y,
+	double label_width, uint32_t width) {
 	double x = ((double)width - label_width) / 2.0;
 
 	PangoLayout *layout = pango_cairo_create_layout(cairo);
@@ -82,23 +71,23 @@ static void draw_name(
 
 void locky_ui_draw_user(cairo_t *cairo, struct locky_state *state,
 	uint32_t width, uint32_t height) {
-	double avatar_cx = (double)width / 2.0;
-	double avatar_cy =
-		input_y(height) - AVATAR_GAP - NAME_GAP - AVATAR_SIZE / 2.0;
-	if (avatar_cy < AVATAR_SIZE / 2.0 + 24.0) {
+	struct locky_ui_layout layout = {0};
+	locky_ui_layout_build(width, height, &layout);
+	if (!layout.show_user) {
 		return;
 	}
 
-	set_source_rgba(cairo, 0x4A4564, 0.42);
-	cairo_arc(cairo, avatar_cx, avatar_cy, AVATAR_SIZE / 2.0, 0.0,
-		6.28318530718);
+	set_source_rgba(cairo, 0x4A4564, 0.38);
+	cairo_arc(cairo, layout.avatar_cx, layout.avatar_cy,
+		layout.avatar_size / 2.0, 0.0, 6.28318530718);
 	cairo_fill(cairo);
 
 	if (state->avatar_surface != NULL) {
-		draw_avatar_image(
-			cairo, state->avatar_surface, avatar_cx, avatar_cy);
+		draw_avatar_image(cairo, state->avatar_surface,
+			layout.avatar_cx, layout.avatar_cy, layout.avatar_size);
 	} else {
-		draw_avatar_icon(cairo, avatar_cx, avatar_cy);
+		draw_avatar_icon(cairo, layout.avatar_cx, layout.avatar_cy);
 	}
-	draw_name(cairo, state->username, input_y(height) - AVATAR_GAP, width);
+	draw_name(cairo, state->username, layout.name_y, layout.name_width,
+		width);
 }

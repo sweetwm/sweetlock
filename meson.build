@@ -65,6 +65,7 @@ executable(
 		'src/render.c',
 		'src/ui/clock.c',
 		'src/ui/input.c',
+		'src/ui/layout.c',
 		'src/ui/user.c',
 		'src/output.c',
 		'src/lock.c',
