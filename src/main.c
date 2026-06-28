@@ -156,6 +156,7 @@ int main(void) {
 	state.display = wl_display_connect(NULL);
 	if (state.display == NULL) {
 		locky_log(LOCKY_ERROR, "failed to connect to wayland display");
+		locky_user_finish(&state);
 		locky_auth_finish();
 		return 1;
 	}
@@ -219,8 +220,10 @@ cleanup:
 		wl_registry_destroy(state.registry);
 	}
 	locky_minute_timer_finish(&state.clock_timer_fd);
+	locky_user_finish(&state);
 
 disconnect:
+	locky_user_finish(&state);
 	if (signal_fds[0] >= 0) {
 		close(signal_fds[0]);
 	}

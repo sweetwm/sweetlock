@@ -20,6 +20,7 @@ wayland_protos = dependency('wayland-protocols', version: '>=1.25')
 wayland_scanner = dependency('wayland-scanner', version: '>=1.15.0', native: true)
 cairo = dependency('cairo')
 pangocairo = dependency('pangocairo')
+gdk_pixbuf = dependency('gdk-pixbuf-2.0')
 xkbcommon = dependency('xkbcommon')
 pam = cc.find_library('pam')
 
@@ -80,7 +81,7 @@ executable(
 	),
 	protocols_src,
 	include_directories: locky_inc,
-	dependencies: [wayland_client, cairo, pangocairo, xkbcommon, pam],
+	dependencies: [wayland_client, cairo, pangocairo, gdk_pixbuf, xkbcommon, pam],
 	install: true,
 )
 

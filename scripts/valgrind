@@ -16,7 +16,11 @@ fi
 
 ninja -C build-valgrind
 
+test_home="$PWD/build-valgrind/home"
+mkdir -p "$test_home"
+
 set +e
+HOME="$test_home" \
 WAYLAND_DISPLAY=locky-valgrind-missing-display \
 valgrind \
 	--leak-check=full \

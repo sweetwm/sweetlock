@@ -30,6 +30,30 @@ static void draw_avatar_icon(cairo_t *cairo, double cx, double cy) {
 	cairo_stroke(cairo);
 }
 
+static void draw_avatar_image(
+	cairo_t *cairo, cairo_surface_t *surface, double cx, double cy) {
+	double source_width = cairo_image_surface_get_width(surface);
+	double source_height = cairo_image_surface_get_height(surface);
+	if (source_width <= 0.0 || source_height <= 0.0) {
+		return;
+	}
+
+	double scale_x = AVATAR_SIZE / source_width;
+	double scale_y = AVATAR_SIZE / source_height;
+	double scale = scale_x > scale_y ? scale_x : scale_y;
+	double draw_width = source_width * scale;
+	double draw_height = source_height * scale;
+
+	cairo_save(cairo);
+	cairo_arc(cairo, cx, cy, AVATAR_SIZE / 2.0, 0.0, 6.28318530718);
+	cairo_clip(cairo);
+	cairo_translate(cairo, cx - draw_width / 2.0, cy - draw_height / 2.0);
+	cairo_scale(cairo, scale, scale);
+	cairo_set_source_surface(cairo, surface, 0.0, 0.0);
+	cairo_paint(cairo);
+	cairo_restore(cairo);
+}
+
 static void draw_name(
 	cairo_t *cairo, const char *name, double y, uint32_t width) {
 	double label_width =
@@ -70,6 +94,11 @@ void locky_ui_draw_user(cairo_t *cairo, struct locky_state *state,
 		6.28318530718);
 	cairo_fill(cairo);
 
-	draw_avatar_icon(cairo, avatar_cx, avatar_cy);
+	if (state->avatar_surface != NULL) {
+		draw_avatar_image(
+			cairo, state->avatar_surface, avatar_cx, avatar_cy);
+	} else {
+		draw_avatar_icon(cairo, avatar_cx, avatar_cy);
+	}
 	draw_name(cairo, state->username, input_y(height) - AVATAR_GAP, width);
 }
