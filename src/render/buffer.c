@@ -1,5 +1,5 @@
-#include "locky/buffer.h"
-#include "locky/log.h"
+#include "render/buffer.h"
+#include "app/log.h"
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>

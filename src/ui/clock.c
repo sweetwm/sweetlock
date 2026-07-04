@@ -1,4 +1,4 @@
-#include "locky/ui/clock.h"
+#include "ui/clock.h"
 #include <pango/pangocairo.h>
 #include <time.h>
 

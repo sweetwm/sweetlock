@@ -1,8 +1,8 @@
-#include "locky/output.h"
+#include "wayland/output.h"
 #include "ext-session-lock-v1-client-protocol.h"
-#include "locky/buffer.h"
-#include "locky/lock.h"
-#include "locky/render.h"
+#include "render/buffer.h"
+#include "render/render.h"
+#include "wayland/lock.h"
 #include <stdlib.h>
 
 static void output_handle_geometry(void *data, struct wl_output *wl_output,

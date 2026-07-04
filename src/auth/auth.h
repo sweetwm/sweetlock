@@ -1,7 +1,7 @@
 #ifndef LOCKY_AUTH_H
 #define LOCKY_AUTH_H
 
-#include "locky/locky.h"
+#include "app/state.h"
 #include <stdbool.h>
 
 bool locky_auth_init(void);

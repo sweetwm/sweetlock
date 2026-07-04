@@ -1,4 +1,4 @@
-#include "locky/log.h"
+#include "app/log.h"
 #include <stdarg.h>
 #include <stdio.h>
 

@@ -1,10 +1,10 @@
-#include "locky/render.h"
-#include "locky/background.h"
-#include "locky/buffer.h"
-#include "locky/log.h"
-#include "locky/ui/clock.h"
-#include "locky/ui/input.h"
-#include "locky/ui/user.h"
+#include "render/render.h"
+#include "app/log.h"
+#include "render/background.h"
+#include "render/buffer.h"
+#include "ui/clock.h"
+#include "ui/input.h"
+#include "ui/user.h"
 #include <cairo.h>
 
 static void set_opaque_region(struct locky_output *output) {

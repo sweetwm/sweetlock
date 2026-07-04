@@ -1,4 +1,4 @@
-#include "locky/unicode.h"
+#include "input/unicode.h"
 #include <string.h>
 
 size_t utf8_chsize(uint32_t ch) {

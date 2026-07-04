@@ -1,7 +1,7 @@
-#include "locky/seat.h"
-#include "locky/locky.h"
-#include "locky/log.h"
-#include "locky/password.h"
+#include "wayland/seat.h"
+#include "app/log.h"
+#include "app/state.h"
+#include "input/password.h"
 #include <stdlib.h>
 #include <sys/mman.h>
 #include <unistd.h>

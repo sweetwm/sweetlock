@@ -1,6 +1,6 @@
-#include "locky/background.h"
-#include "locky/image.h"
-#include "locky/log.h"
+#include "render/background.h"
+#include "app/log.h"
+#include "render/image.h"
 #include <stdlib.h>
 #include <unistd.h>
 

@@ -1,8 +1,8 @@
-#include "locky/auth.h"
-#include "locky/comm.h"
-#include "locky/log.h"
-#include "locky/password.h"
-#include "locky/render.h"
+#include "auth/auth.h"
+#include "app/log.h"
+#include "auth/comm.h"
+#include "input/password.h"
+#include "render/render.h"
 #include <unistd.h>
 
 bool locky_auth_init(void) {

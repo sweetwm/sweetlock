@@ -1,7 +1,7 @@
 #ifndef LOCKY_BACKGROUND_H
 #define LOCKY_BACKGROUND_H
 
-#include "locky/locky.h"
+#include "app/state.h"
 #include <cairo.h>
 #include <stdbool.h>
 #include <stdint.h>

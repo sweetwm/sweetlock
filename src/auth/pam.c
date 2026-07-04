@@ -1,6 +1,6 @@
-#include "locky/pam.h"
-#include "locky/comm.h"
-#include "locky/log.h"
+#include "auth/pam.h"
+#include "app/log.h"
+#include "auth/comm.h"
 #include <pwd.h>
 #include <security/pam_appl.h>
 #include <stdlib.h>

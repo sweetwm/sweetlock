@@ -1,7 +1,7 @@
 #ifndef LOCKY_USER_H
 #define LOCKY_USER_H
 
-#include "locky/locky.h"
+#include "app/state.h"
 
 void locky_user_init(struct locky_state *state);
 void locky_user_finish(struct locky_state *state);

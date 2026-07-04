@@ -1,7 +1,7 @@
 #ifndef LOCKY_OUTPUT_H
 #define LOCKY_OUTPUT_H
 
-#include "locky/locky.h"
+#include "app/state.h"
 #include <stdint.h>
 
 void locky_output_create(struct locky_state *state,

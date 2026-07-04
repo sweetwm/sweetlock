@@ -54,30 +54,30 @@ foreach xml : client_protocols
 	protocols_src += wayland_scanner_client.process(xml)
 endforeach
 
-locky_inc = include_directories('include')
+locky_inc = include_directories('src')
 
 executable(
 	'locky',
 	files(
 		'src/main.c',
-		'src/log.c',
-		'src/image.c',
-		'src/background.c',
-		'src/buffer.c',
-		'src/render.c',
+		'src/app/log.c',
+		'src/app/time.c',
+		'src/app/timer.c',
+		'src/render/image.c',
+		'src/render/background.c',
+		'src/render/buffer.c',
+		'src/render/render.c',
 		'src/ui/clock.c',
 		'src/ui/input.c',
 		'src/ui/layout.c',
 		'src/ui/user.c',
-		'src/output.c',
-		'src/lock.c',
-		'src/seat.c',
-		'src/password.c',
-		'src/unicode.c',
-		'src/time.c',
-		'src/timer.c',
-		'src/user.c',
-		'src/registry.c',
+		'src/wayland/output.c',
+		'src/wayland/lock.c',
+		'src/wayland/seat.c',
+		'src/wayland/registry.c',
+		'src/input/password.c',
+		'src/input/unicode.c',
+		'src/user/user.c',
 		'src/auth/auth.c',
 		'src/auth/comm.c',
 		'src/auth/pam.c',
@@ -95,7 +95,7 @@ install_data(
 
 test_unicode = executable(
 	'test_unicode',
-	files('tests/test_unicode.c', 'src/unicode.c'),
+	files('tests/test_unicode.c', 'src/input/unicode.c'),
 	include_directories: locky_inc,
 )
 
@@ -110,9 +110,9 @@ test_password = executable(
 	'test_password',
 	files(
 		'tests/test_password.c',
-		'src/password.c',
-		'src/unicode.c',
-		'src/log.c',
+		'src/input/password.c',
+		'src/input/unicode.c',
+		'src/app/log.c',
 	),
 	include_directories: locky_inc,
 	dependencies: [wayland_client, cairo, xkbcommon],
@@ -122,9 +122,9 @@ test_background = executable(
 	'test_background',
 	files(
 		'tests/test_background.c',
-		'src/background.c',
-		'src/image.c',
-		'src/log.c',
+		'src/render/background.c',
+		'src/render/image.c',
+		'src/app/log.c',
 	),
 	include_directories: locky_inc,
 	dependencies: [wayland_client, cairo, gdk_pixbuf],
@@ -134,7 +134,7 @@ test_image = executable(
 	'test_image',
 	files(
 		'tests/test_image.c',
-		'src/image.c',
+		'src/render/image.c',
 	),
 	include_directories: locky_inc,
 	dependencies: [cairo, gdk_pixbuf],

@@ -1,6 +1,6 @@
-#include "locky/ui/input.h"
-#include "locky/password.h"
-#include "locky/ui/layout.h"
+#include "ui/input.h"
+#include "input/password.h"
+#include "ui/layout.h"
 #include <pango/pangocairo.h>
 
 #define INPUT_RADIUS 8.0

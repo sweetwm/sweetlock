@@ -1,5 +1,5 @@
-#include "locky/locky.h"
-#include "locky/password.h"
+#include "app/state.h"
+#include "input/password.h"
 #include <assert.h>
 #include <string.h>
 

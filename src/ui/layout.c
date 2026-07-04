@@ -1,4 +1,4 @@
-#include "locky/ui/layout.h"
+#include "ui/layout.h"
 
 #define INPUT_WIDTH 310.0
 #define INPUT_HEIGHT 54.0

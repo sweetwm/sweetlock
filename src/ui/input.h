@@ -1,7 +1,7 @@
 #ifndef LOCKY_UI_INPUT_H
 #define LOCKY_UI_INPUT_H
 
-#include "locky/locky.h"
+#include "app/state.h"
 #include <cairo.h>
 
 void locky_ui_draw_input(cairo_t *cairo, struct locky_state *state,

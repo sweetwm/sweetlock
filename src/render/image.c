@@ -1,4 +1,4 @@
-#include "locky/image.h"
+#include "render/image.h"
 #include <gdk-pixbuf/gdk-pixbuf.h>
 #include <stddef.h>
 #include <stdint.h>

@@ -1,9 +1,9 @@
 #ifndef LOCKY_LOCKY_H
 #define LOCKY_LOCKY_H
 
-#include "locky/buffer.h"
-#include "locky/password.h"
-#include "locky/seat.h"
+#include "input/password.h"
+#include "render/buffer.h"
+#include "wayland/seat.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include <wayland-client.h>

@@ -1,4 +1,4 @@
-#include "locky/image.h"
+#include "render/image.h"
 #include <assert.h>
 #include <cairo.h>
 #include <stdlib.h>

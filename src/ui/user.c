@@ -1,5 +1,5 @@
-#include "locky/ui/user.h"
-#include "locky/ui/layout.h"
+#include "ui/user.h"
+#include "ui/layout.h"
 #include <pango/pangocairo.h>
 
 static void set_source_rgba(cairo_t *cairo, uint32_t color, double alpha) {

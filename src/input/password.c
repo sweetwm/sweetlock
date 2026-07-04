@@ -1,9 +1,9 @@
-#include "locky/password.h"
-#include "locky/auth.h"
-#include "locky/locky.h"
-#include "locky/log.h"
-#include "locky/render.h"
-#include "locky/unicode.h"
+#include "input/password.h"
+#include "app/log.h"
+#include "app/state.h"
+#include "auth/auth.h"
+#include "input/unicode.h"
+#include "render/render.h"
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>

@@ -6,7 +6,7 @@ cd "$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 mode=${1:-write}
 
 dirs=""
-for d in src include tests; do
+for d in src tests; do
 	[ -d "$d" ] && dirs="$dirs $d"
 done
 

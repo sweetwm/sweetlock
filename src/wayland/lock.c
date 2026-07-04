@@ -1,8 +1,8 @@
-#include "locky/lock.h"
+#include "wayland/lock.h"
+#include "app/log.h"
+#include "app/time.h"
 #include "ext-session-lock-v1-client-protocol.h"
-#include "locky/log.h"
-#include "locky/render.h"
-#include "locky/time.h"
+#include "render/render.h"
 #include <inttypes.h>
 #include <stdlib.h>
 

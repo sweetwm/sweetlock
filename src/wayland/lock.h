@@ -1,7 +1,7 @@
 #ifndef LOCKY_LOCK_H
 #define LOCKY_LOCK_H
 
-#include "locky/locky.h"
+#include "app/state.h"
 #include <stdbool.h>
 
 bool locky_lock_acquire(struct locky_state *state);

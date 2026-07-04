@@ -1,4 +1,4 @@
-#include "locky/timer.h"
+#include "app/timer.h"
 #include <errno.h>
 #include <stdint.h>
 #include <sys/timerfd.h>

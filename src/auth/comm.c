@@ -1,7 +1,7 @@
-#include "locky/comm.h"
-#include "locky/log.h"
-#include "locky/pam.h"
-#include "locky/password.h"
+#include "auth/comm.h"
+#include "app/log.h"
+#include "auth/pam.h"
+#include "input/password.h"
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>

@@ -1,4 +1,4 @@
-#include "locky/ui/layout.h"
+#include "ui/layout.h"
 #include <assert.h>
 #include <math.h>
 

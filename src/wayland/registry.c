@@ -1,7 +1,7 @@
-#include "locky/registry.h"
+#include "wayland/registry.h"
 #include "ext-session-lock-v1-client-protocol.h"
-#include "locky/output.h"
-#include "locky/seat.h"
+#include "wayland/output.h"
+#include "wayland/seat.h"
 #include <string.h>
 
 static void handle_global(void *data, struct wl_registry *registry,

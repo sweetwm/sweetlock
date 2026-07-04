@@ -1,5 +1,5 @@
-#include "locky/user.h"
-#include "locky/image.h"
+#include "user/user.h"
+#include "render/image.h"
 #include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
