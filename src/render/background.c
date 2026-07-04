@@ -1,7 +1,6 @@
 #include "render/background.h"
 #include "app/log.h"
 #include "render/image.h"
-#include <stdlib.h>
 #include <unistd.h>
 
 static void set_source_rgb(cairo_t *cairo, uint32_t color) {
@@ -30,10 +29,10 @@ bool locky_background_cover_geometry(int32_t source_width,
 }
 
 void locky_background_init(struct locky_state *state) {
-	const char *path = getenv("LOCKY_BACKGROUND_IMAGE");
-	if (path == NULL || path[0] == '\0') {
+	if (!state->config.has_background_image) {
 		return;
 	}
+	const char *path = state->config.background_image;
 	if (access(path, R_OK) != 0) {
 		locky_log(LOCKY_ERROR, "background image is not readable");
 		return;

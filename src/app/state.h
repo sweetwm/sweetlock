@@ -1,6 +1,7 @@
 #ifndef LOCKY_LOCKY_H
 #define LOCKY_LOCKY_H
 
+#include "config/config.h"
 #include "input/password.h"
 #include "render/buffer.h"
 #include "wayland/seat.h"
@@ -29,6 +30,7 @@ struct locky_state {
 
 	struct locky_xkb xkb;
 	struct locky_password password;
+	struct locky_config config;
 	enum locky_auth_state auth_state;
 	char username[LOCKY_USERNAME_MAX];
 	cairo_surface_t *avatar_surface;

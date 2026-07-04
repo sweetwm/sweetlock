@@ -1,4 +1,5 @@
 #include "user/user.h"
+#include "app/log.h"
 #include "render/image.h"
 #include <pwd.h>
 #include <stdio.h>
@@ -52,6 +53,21 @@ static void load_face_avatar(struct locky_state *state, const char *home) {
 		path, AVATAR_LOAD_SIZE, AVATAR_LOAD_SIZE, true);
 }
 
+static void load_config_avatar(struct locky_state *state) {
+	if (!state->config.has_avatar_image) {
+		return;
+	}
+	if (access(state->config.avatar_image, R_OK) != 0) {
+		locky_log(LOCKY_ERROR, "avatar image is not readable");
+		return;
+	}
+	state->avatar_surface = locky_image_load(state->config.avatar_image,
+		AVATAR_LOAD_SIZE, AVATAR_LOAD_SIZE, true);
+	if (state->avatar_surface == NULL) {
+		locky_log(LOCKY_ERROR, "failed to load avatar image");
+	}
+}
+
 void locky_user_init(struct locky_state *state) {
 	copy_name(state->username, "User");
 	const char *home = getenv("HOME");
@@ -66,7 +82,10 @@ void locky_user_init(struct locky_state *state) {
 	char *buf = malloc((size_t)buf_size);
 	if (buf == NULL) {
 		copy_name(state->username, getenv("USER"));
-		load_face_avatar(state, home);
+		load_config_avatar(state);
+		if (state->avatar_surface == NULL) {
+			load_face_avatar(state, home);
+		}
 		return;
 	}
 
@@ -81,7 +100,10 @@ void locky_user_init(struct locky_state *state) {
 		copy_name(state->username, getenv("USER"));
 	}
 
-	load_face_avatar(state, home);
+	load_config_avatar(state);
+	if (state->avatar_surface == NULL) {
+		load_face_avatar(state, home);
+	}
 	free(buf);
 }
 

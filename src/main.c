@@ -3,6 +3,7 @@
 #include "app/time.h"
 #include "app/timer.h"
 #include "auth/auth.h"
+#include "config/config.h"
 #include "ext-session-lock-v1-client-protocol.h"
 #include "input/password.h"
 #include "render/background.h"
@@ -17,8 +18,6 @@
 #include <poll.h>
 #include <signal.h>
 #include <unistd.h>
-
-#define DEFAULT_BACKGROUND 0x1E1E2E
 
 static int signal_fds[2] = {-1, -1};
 
@@ -149,7 +148,9 @@ int main(void) {
 		return 1;
 	}
 
-	state.background = DEFAULT_BACKGROUND;
+	locky_config_defaults(&state.config);
+	locky_config_load(&state.config);
+	state.background = state.config.background_color;
 	locky_background_init(&state);
 	locky_user_init(&state);
 	wl_list_init(&state.outputs);

@@ -63,6 +63,8 @@ executable(
 		'src/app/log.c',
 		'src/app/time.c',
 		'src/app/timer.c',
+		'src/config/config.c',
+		'src/config/path.c',
 		'src/render/image.c',
 		'src/render/background.c',
 		'src/render/buffer.c',
@@ -140,8 +142,20 @@ test_image = executable(
 	dependencies: [cairo, gdk_pixbuf],
 )
 
+test_config = executable(
+	'test_config',
+	files(
+		'tests/test_config.c',
+		'src/config/config.c',
+		'src/config/path.c',
+		'src/app/log.c',
+	),
+	include_directories: locky_inc,
+)
+
 test('unicode', test_unicode)
 test('layout', test_layout)
 test('password', test_password)
 test('background', test_background)
 test('image', test_image)
+test('config', test_config)
