@@ -1,21 +1,27 @@
-# Meson / Ninja build output
+# Meson and Ninja build output
 /build/
-/builddir/
-build-asan
-build-release
-build-valgrind
-
-/subprojects/*/
-!/subprojects/*.wrap
-
-*.o
-*.a
-*.so
-*.so.*
-
+/build-*/
 compile_commands.json
 .cache/
 
+# private tests and fuzz harnesses, never pushed
+/test
+
+# Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs and crash artifacts
+*.log
 core
 core.*
-*.log
+crash-*
+leak-*
+oom-*
+timeout-*
+
+# Nix
+.direnv/
+result

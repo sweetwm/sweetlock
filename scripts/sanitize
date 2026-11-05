@@ -1,0 +1,26 @@
+#!/usr/bin/env sh
+set -eu
+
+cd "$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)"
+
+if [ -d build-asan ]; then
+	meson setup --reconfigure build-asan --werror \
+		-Db_sanitize=address,undefined -Db_lundef=false
+else
+	meson setup build-asan --werror \
+		-Db_sanitize=address,undefined -Db_lundef=false
+fi
+
+ninja -C build-asan
+
+export ASAN_OPTIONS="${ASAN_OPTIONS:-detect_leaks=1}"
+export UBSAN_OPTIONS="${UBSAN_OPTIONS:-print_stacktrace=1:halt_on_error=1}"
+export LSAN_OPTIONS="${LSAN_OPTIONS:-suppressions=$PWD/scripts/lsan.supp:print_suppressions=0}"
+
+./build-asan/sweetlock --version >/dev/null
+
+if [ -n "$(meson test -C build-asan --list 2>/dev/null)" ]; then
+	meson test -C build-asan --print-errorlogs
+else
+	printf 'No tests present (test/ is private); skipping.\n'
+fi

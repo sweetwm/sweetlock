@@ -1,0 +1,14 @@
+#!/usr/bin/env sh
+set -eu
+
+cd "$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)"
+
+./scripts/check
+./scripts/tidy
+./scripts/sanitize
+
+if command -v valgrind >/dev/null 2>&1; then
+	./scripts/valgrind
+else
+	printf 'valgrind not found; skipping ./scripts/valgrind.\n'
+fi
