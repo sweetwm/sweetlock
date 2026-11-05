@@ -1,0 +1,23 @@
+#!/usr/bin/env sh
+set -eu
+
+cd "$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)"
+
+# BUILD lets a second compiler keep its own directory: CC=clang BUILD=build-clang
+build=${BUILD:-build}
+
+./scripts/format check
+
+if [ -d "$build" ]; then
+	meson setup --reconfigure "$build" --werror
+else
+	meson setup "$build" --werror
+fi
+
+ninja -C "$build"
+
+if [ -n "$(meson test -C "$build" --list 2>/dev/null)" ]; then
+	meson test -C "$build" --print-errorlogs
+else
+	printf 'No tests present (test/ is private); skipping.\n'
+fi

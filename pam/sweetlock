@@ -1,5 +1,5 @@
 #
-# PAM configuration for the locky screen locker.
+# PAM configuration for the Sweetlock screen locker.
 # By default it includes the system 'login' configuration.
 #
 auth include login

@@ -1,0 +1,136 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  # Rolling archlinux:latest picks up new compilers
+  schedule:
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PACMAN_DEPS: >-
+    base-devel git meson ninja pkgconf clang valgrind
+  PACMAN_LINT_DEPS: >-
+    git actionlint shellcheck
+
+jobs:
+  lint:
+    name: Workflow and shell lint
+    if: vars.RUN_CI == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    container:
+      image: archlinux:latest
+    steps:
+      - name: Install dependencies
+        run: |
+          # shellcheck disable=SC2086
+          pacman -Syu --noconfirm --needed $PACMAN_LINT_DEPS
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Lint workflows
+        run: actionlint
+      - name: Lint shell scripts
+        run: shellcheck scripts/all scripts/check scripts/format scripts/sanitize scripts/tidy scripts/valgrind
+
+  format:
+    name: Format
+    if: vars.RUN_CI == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    container:
+      image: archlinux:latest
+    steps:
+      - name: Install dependencies
+        run: |
+          # shellcheck disable=SC2086
+          pacman -Syu --noconfirm --needed $PACMAN_DEPS
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Check formatting
+        run: ./scripts/format check
+
+  build:
+    name: Build (${{ matrix.compiler }})
+    if: vars.RUN_CI == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [gcc, clang]
+    container:
+      image: archlinux:latest
+    env:
+      CC: ${{ matrix.compiler }}
+    steps:
+      - name: Install dependencies
+        run: |
+          # shellcheck disable=SC2086
+          pacman -Syu --noconfirm --needed $PACMAN_DEPS
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Build and test
+        run: ./scripts/check
+
+  tidy:
+    name: Clang-Tidy
+    if: vars.RUN_CI == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    container:
+      image: archlinux:latest
+    steps:
+      - name: Install dependencies
+        run: |
+          # shellcheck disable=SC2086
+          pacman -Syu --noconfirm --needed $PACMAN_DEPS
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Run clang-tidy
+        run: ./scripts/tidy
+
+  sanitizers:
+    name: Sanitizers
+    if: vars.RUN_CI == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    container:
+      image: archlinux:latest
+    steps:
+      - name: Install dependencies
+        run: |
+          # shellcheck disable=SC2086
+          pacman -Syu --noconfirm --needed $PACMAN_DEPS
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: ASan and UBSan
+        run: ./scripts/sanitize
+
+  valgrind:
+    name: Valgrind
+    if: vars.RUN_CI == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    container:
+      image: archlinux:latest
+    env:
+      DEBUGINFOD_URLS: https://debuginfod.archlinux.org
+    steps:
+      - name: Install dependencies
+        run: |
+          # shellcheck disable=SC2086
+          pacman -Syu --noconfirm --needed $PACMAN_DEPS
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Valgrind smoke run
+        run: ./scripts/valgrind
