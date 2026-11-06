@@ -15,6 +15,7 @@ const char args_usage[] =
 	"  --set KEY=VALUE   Set any config key, e.g. "
 	"background.color=#000000\n"
 	"  --color HEX       Same as --set background.color=HEX\n"
+	"  -f, --daemonize   Return once the screen is locked\n"
 	"  -h, --help        Print help\n"
 	"  -V, --version     Print version\n";
 
@@ -75,6 +76,10 @@ void args_parse(struct args *args, int argc, char **argv) {
 		if (is(arg, "-V", "--version")) {
 			args->action = ARGS_VERSION;
 			return;
+		}
+		if (is(arg, "-f", "--daemonize")) {
+			args->daemonize = true;
+			continue;
 		}
 		if (strcmp(arg, "--no-config") == 0) {
 			args->no_config = true;

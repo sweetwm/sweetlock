@@ -34,5 +34,7 @@ int main(int argc, char **argv) {
 	config_load(&config, args.config_path, args.no_config);
 	config_override(&config, args.overrides, args.override_count);
 	config_log(&config);
-	return app_run(&config, &start);
+	// -f forks here, before the PAM helper and any library thread
+	int locked_fd = args.daemonize ? app_daemonize() : -1;
+	return app_run(&config, &start, locked_fd);
 }

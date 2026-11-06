@@ -28,6 +28,8 @@ struct app {
 	struct input input;
 	struct display display;
 	int signal_fd;
+	// -f only: reported and closed once the lock is confirmed
+	int locked_fd;
 };
 
 enum signal_action {
@@ -130,6 +132,16 @@ static int stop(struct display *display) {
 	return EXIT_SUCCESS;
 }
 
+static void report_locked(struct app *app) {
+	enum lock_state state = app->display.lock.state;
+	// an unlock queued before locked goes straight to unlocking
+	if (app->locked_fd >= 0 &&
+		(state == LOCK_LOCKED || state == LOCK_UNLOCKING)) {
+		app_report_locked(app->locked_fd);
+		app->locked_fd = -1;
+	}
+}
+
 static int run(struct app *app) {
 	struct display *display = &app->display;
 	struct wl_display *wl = display->wl;
@@ -147,6 +159,7 @@ static int run(struct app *app) {
 			}
 		}
 		// every dispatch and signal is acted on here before blocking
+		report_locked(app);
 		if (stopping(display)) {
 			wl_display_cancel_read(wl);
 			return stop(display);
@@ -201,11 +214,13 @@ static bool open_signals(struct app *app) {
 	return true;
 }
 
-int app_run(const struct config *config, const struct timespec *start) {
+int app_run(const struct config *config, const struct timespec *start,
+	int locked_fd) {
 	struct app app = {
 		.auth = {.pid = -1, .fd = -1},
 		.input = {.repeat_fd = -1},
 		.signal_fd = -1,
+		.locked_fd = locked_fd,
 	};
 	int status = EXIT_FAILURE;
 	// the helper forks first, before any thread or descriptor it must not
@@ -220,6 +235,9 @@ int app_run(const struct config *config, const struct timespec *start) {
 	input_finish(&app.input);
 	if (app.signal_fd >= 0) {
 		close(app.signal_fd);
+	}
+	if (app.locked_fd >= 0) {
+		close(app.locked_fd);
 	}
 	auth_stop(&app.auth);
 	return status;

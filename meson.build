@@ -68,7 +68,8 @@ endif
 executable(
 	'sweetlock',
 	'src/main.c',
-	'src/app.c',
+	'src/app/daemon.c',
+	'src/app/run.c',
 	'src/args.c',
 	'src/auth/auth.c',
 	'src/auth/helper.c',
