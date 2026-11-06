@@ -1,0 +1,8 @@
+# Sweetlock example config, with every key at its default.
+# Copy it to ~/.config/sweetlock/config.toml and change what you like.
+# Any scalar key can also be set from the command line:
+#   sweetlock --set background.color=#000000
+
+[background]
+# Solid colour, and the first frame shown, as "#rrggbb" or "#rrggbbaa"
+color = "#1f1b2e"
