@@ -20,6 +20,7 @@ struct args {
 	enum args_action action;
 	const char *config_path;
 	bool no_config;
+	bool daemonize;
 	// in command-line order, so a later flag wins
 	struct config_override overrides[ARGS_OVERRIDE_MAX];
 	size_t override_count;

@@ -131,7 +131,17 @@ static void serve(int fd, pam_handle_t *pam, struct password *password) {
 	}
 }
 
+// PAM modules see only stdio and the socket, and the -f report socket must
+// close when the locker exits
+static void close_inherited(int fd) {
+	if (fd > 3) {
+		close_range(3, (unsigned)fd - 1, 0);
+	}
+	close_range(fd < 3 ? 3 : (unsigned)fd + 1, ~0U, 0);
+}
+
 _Noreturn void helper_run(int fd, pid_t parent, const char *user) {
+	close_inherited(fd);
 	// SIGTERM is blocked here as in the parent, so only SIGKILL works
 	if (prctl(PR_SET_DUMPABLE, 0, 0, 0, 0) != 0 ||
 		prctl(PR_SET_PDEATHSIG, SIGKILL, 0, 0, 0) != 0 ||
