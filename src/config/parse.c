@@ -39,12 +39,16 @@ static bool unknown(struct walk *w, size_t length) {
 	return fail(w, "%.*s: unknown key", (int)length, w->path);
 }
 
+// a TOML boolean goes through the setter as text, the same path as a flag
 static bool value(
 	struct walk *w, const struct config_key *key, toml_datum_t datum) {
-	if (datum.type != TOML_STRING) {
-		// the setter words the error for its type
-		return config_key_set(
-			w->config, key, "", 0, w->error, w->error_size);
+	if (key->type == CONFIG_BOOL && datum.type == TOML_BOOLEAN) {
+		const char *text = datum.u.boolean ? "true" : "false";
+		return config_key_set(w->config, key, text, strlen(text),
+			w->error, w->error_size);
+	}
+	if (key->type == CONFIG_BOOL || datum.type != TOML_STRING) {
+		return fail(w, "%s: %s", key->path, config_key_expected(key));
 	}
 	return config_key_set(w->config, key, datum.u.str.ptr,
 		(size_t)datum.u.str.len, w->error, w->error_size);

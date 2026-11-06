@@ -28,9 +28,13 @@ add_project_arguments(
 
 fs = import('fs')
 
+cairo = dependency('cairo')
+# system includes, so GLib's headers stay out of our warning flags
+pangocairo = dependency('pangocairo', include_type: 'system')
+libm = cc.find_library('m', required: false)
 wayland_client = dependency('wayland-client')
-# ext-session-lock-v1 arrived in 1.25
-wayland_protocols = dependency('wayland-protocols', version: '>= 1.25')
+# fractional-scale-v1 arrived in 1.31
+wayland_protocols = dependency('wayland-protocols', version: '>= 1.31')
 wayland_scanner = find_program(
 	dependency('wayland-scanner', native: true).get_variable('wayland_scanner'),
 	native: true,
@@ -70,6 +74,7 @@ executable(
 	'src/main.c',
 	'src/app/daemon.c',
 	'src/app/run.c',
+	'src/app/preview.c',
 	'src/args.c',
 	'src/auth/auth.c',
 	'src/auth/helper.c',
@@ -81,10 +86,17 @@ executable(
 	'src/input/keyboard.c',
 	'src/input/password.c',
 	'src/log.c',
+	'src/render/text.c',
+	'src/scale.c',
+	'src/ui/clock.c',
+	'src/ui/ui.c',
+	'src/ui/user.c',
+	'src/utf8.c',
 	'src/wayland/buffer.c',
 	'src/wayland/display.c',
 	'src/wayland/lock.c',
 	'src/wayland/output.c',
+	'src/wayland/panel.c',
 	'src/wayland/seat.c',
 	c_args: sweetlock_args,
 	include_directories: sweetlock_inc,
@@ -94,6 +106,9 @@ executable(
 		sweetlock_protocols_dep,
 		xkbcommon,
 		pam,
+		cairo,
+		pangocairo,
+		libm,
 	],
 	install: true,
 )

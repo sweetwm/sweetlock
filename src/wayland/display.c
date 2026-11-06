@@ -6,6 +6,7 @@
 #include <wayland-client.h>
 
 #include "ext-session-lock-v1-client-protocol.h"
+#include "fractional-scale-v1-client-protocol.h"
 #include "log.h"
 #include "viewporter-client-protocol.h"
 #include "wayland/buffer.h"
@@ -15,10 +16,12 @@
 // highest versions whose requests and events this code handles
 enum {
 	COMPOSITOR_VERSION = 4,
+	SUBCOMPOSITOR_VERSION = 1,
 	SHM_VERSION = 1,
 	OUTPUT_VERSION = 4,
 	SEAT_VERSION = 7,
 	VIEWPORTER_VERSION = 1,
+	FRACTIONAL_SCALE_VERSION = 1,
 	LOCK_MANAGER_VERSION = 1,
 };
 
@@ -71,6 +74,11 @@ static void registry_global(void *data, struct wl_registry *registry,
 	if (!display->compositor && is(interface, &wl_compositor_interface)) {
 		display->compositor = bind(registry, name,
 			&wl_compositor_interface, version, COMPOSITOR_VERSION);
+	} else if (!display->subcompositor &&
+		   is(interface, &wl_subcompositor_interface)) {
+		display->subcompositor =
+			bind(registry, name, &wl_subcompositor_interface,
+				version, SUBCOMPOSITOR_VERSION);
 	} else if (!display->shm && is(interface, &wl_shm_interface)) {
 		display->shm = bind(registry, name, &wl_shm_interface, version,
 			SHM_VERSION);
@@ -78,6 +86,11 @@ static void registry_global(void *data, struct wl_registry *registry,
 		   is(interface, &wp_viewporter_interface)) {
 		display->viewporter = bind(registry, name,
 			&wp_viewporter_interface, version, VIEWPORTER_VERSION);
+	} else if (!display->fractional_scale &&
+		   is(interface, &wp_fractional_scale_manager_v1_interface)) {
+		display->fractional_scale = bind(registry, name,
+			&wp_fractional_scale_manager_v1_interface, version,
+			FRACTIONAL_SCALE_VERSION);
 	} else if (!display->lock_manager &&
 		   is(interface, &ext_session_lock_manager_v1_interface)) {
 		display->lock_manager = bind(registry, name,
@@ -122,6 +135,9 @@ static const char *missing_global(const struct display *display) {
 	if (!display->compositor) {
 		return wl_compositor_interface.name;
 	}
+	if (!display->subcompositor) {
+		return wl_subcompositor_interface.name;
+	}
 	if (!display->shm) {
 		return wl_shm_interface.name;
 	}
@@ -163,6 +179,11 @@ bool display_connect(struct display *display, const struct config *config,
 			missing);
 		return false;
 	}
+	if (!display->fractional_scale) {
+		log_info("the compositor does not offer %s; using "
+			 "wl_output.scale",
+			wp_fractional_scale_manager_v1_interface.name);
+	}
 	display->solid = buffer_solid(display->shm, config->background.color);
 	return display->solid && !display->failed;
 }
@@ -178,6 +199,22 @@ bool display_lock(struct display *display, const struct timespec *start) {
 		}
 	}
 	return true;
+}
+
+bool display_render(struct display *display, const struct ui_content *content) {
+	bool committed = false;
+	struct output *output = NULL;
+	wl_list_for_each(output, &display->outputs, link) {
+		committed |= output_render(output, content);
+	}
+	return committed;
+}
+
+void display_mark_dirty(struct display *display, enum ui_part part) {
+	struct output *output = NULL;
+	wl_list_for_each(output, &display->outputs, link) {
+		output_mark_dirty(output, part);
+	}
 }
 
 void display_log_lost(struct display *display) {
@@ -218,11 +255,18 @@ void display_disconnect(struct display *display) {
 	if (display->lock_manager) {
 		ext_session_lock_manager_v1_destroy(display->lock_manager);
 	}
+	if (display->fractional_scale) {
+		wp_fractional_scale_manager_v1_destroy(
+			display->fractional_scale);
+	}
 	if (display->viewporter) {
 		wp_viewporter_destroy(display->viewporter);
 	}
 	if (display->shm) {
 		wl_shm_destroy(display->shm);
+	}
+	if (display->subcompositor) {
+		wl_subcompositor_destroy(display->subcompositor);
 	}
 	if (display->compositor) {
 		wl_compositor_destroy(display->compositor);

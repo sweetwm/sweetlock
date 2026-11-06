@@ -5,7 +5,10 @@
 #include <stdint.h>
 #include <wayland-util.h>
 
+#include "ui/ui.h"
+
 struct display;
+struct panel;
 struct wl_output;
 
 enum { OUTPUT_NAME_SIZE = 64 };
@@ -19,9 +22,23 @@ struct output {
 	char name[OUTPUT_NAME_SIZE];
 	struct wl_surface *surface;
 	struct wp_viewport *viewport;
+	struct wp_fractional_scale_v1 *fractional;
 	struct ext_session_lock_surface_v1 *lock_surface;
 	// a buffer is attached, so later configures only resize
 	bool mapped;
+	// logical, from the last configure
+	int32_t width;
+	int32_t height;
+	// in 120ths, 0 until the compositor sends one
+	uint32_t fractional_scale;
+	int32_t integer_scale;
+	int32_t pending_integer_scale;
+	struct ui *ui;
+	struct panel *panels[UI_PARTS];
+	// the size or scale changed since the panels were placed
+	bool relayout;
+	// a broken UI is dropped once and the output stays locked without it
+	bool ui_failed;
 };
 
 // takes ownership of wl, released on failure
@@ -30,6 +47,11 @@ struct output *output_create(
 
 // creates this output's lock surface on the display's lock
 bool output_lock(struct output *output);
+
+// creates, places and draws the UI once mapped; true when it committed
+bool output_render(struct output *output, const struct ui_content *content);
+
+void output_mark_dirty(struct output *output, enum ui_part part);
 
 void output_destroy(struct output *output);
 

@@ -5,9 +5,34 @@
 #include <wayland-client.h>
 
 #include "ext-session-lock-v1-client-protocol.h"
+#include "fractional-scale-v1-client-protocol.h"
 #include "log.h"
+#include "scale.h"
 #include "viewporter-client-protocol.h"
 #include "wayland/display.h"
+#include "wayland/panel.h"
+
+static uint32_t effective_scale(const struct output *output) {
+	if (output->fractional_scale) {
+		return output->fractional_scale;
+	}
+	return (uint32_t)output->integer_scale * SCALE_DENOMINATOR;
+}
+
+static void set_scale(
+	struct output *output, uint32_t fractional, int32_t integer) {
+	uint32_t old = effective_scale(output);
+	output->fractional_scale = fractional;
+	output->integer_scale = integer;
+	uint32_t scale = effective_scale(output);
+	if (scale != old) {
+		// before the UI exists the integer and fractional events race
+		log_at(output->ui ? LOG_INFO : LOG_DEBUG,
+			"output %s scale is now %.3f", output->name,
+			scale_factor(scale));
+		output->relayout = true;
+	}
+}
 
 static void output_geometry(void *data, struct wl_output *wl, int32_t x,
 	int32_t y, int32_t physical_width, int32_t physical_height,
@@ -36,14 +61,21 @@ static void output_mode(void *data, struct wl_output *wl, uint32_t flags,
 }
 
 static void output_done(void *data, struct wl_output *wl) {
-	(void)data;
 	(void)wl;
+	struct output *output = data;
+	set_scale(output, output->fractional_scale,
+		output->pending_integer_scale);
 }
 
 static void output_scale(void *data, struct wl_output *wl, int32_t factor) {
-	(void)data;
 	(void)wl;
-	(void)factor;
+	struct output *output = data;
+	if (factor <= 0 || factor > SCALE_MAX / SCALE_DENOMINATOR) {
+		log_warn("ignoring scale %d for output %s", factor,
+			output->name);
+		return;
+	}
+	output->pending_integer_scale = factor;
 }
 
 // the name only labels log lines, so a cut-off one is fine
@@ -94,6 +126,8 @@ struct output *output_create(
 		.display = display,
 		.wl = wl,
 		.global = global,
+		.integer_scale = 1,
+		.pending_integer_scale = 1,
 	};
 	snprintf(output->name, sizeof output->name, "wl_output@%u",
 		wl_proxy_get_id((struct wl_proxy *)wl));
@@ -139,12 +173,48 @@ static void lock_surface_configure(void *data,
 		output->mapped ? "resized" : "covered", output->name, width,
 		height);
 	output->mapped = true;
+	output->width = w;
+	output->height = h;
+	output->relayout = true;
 }
 
 static const struct ext_session_lock_surface_v1_listener lock_surface_listener =
 	{
 		.configure = lock_surface_configure,
 };
+
+static void preferred_scale(
+	void *data, struct wp_fractional_scale_v1 *fractional, uint32_t scale) {
+	(void)fractional;
+	struct output *output = data;
+	if (!scale_valid(scale)) {
+		log_warn("ignoring scale %u/%d for output %s", scale,
+			SCALE_DENOMINATOR, output->name);
+		return;
+	}
+	set_scale(output, scale, output->integer_scale);
+}
+
+static const struct wp_fractional_scale_v1_listener fractional_listener = {
+	.preferred_scale = preferred_scale,
+};
+
+// the background is a 1x1 buffer, so only the UI follows the scale
+static bool attach_scale(struct output *output) {
+	struct display *display = output->display;
+	if (!display->fractional_scale) {
+		return true;
+	}
+	output->fractional =
+		wp_fractional_scale_manager_v1_get_fractional_scale(
+			display->fractional_scale, output->surface);
+	if (!output->fractional) {
+		return false;
+	}
+	wp_fractional_scale_v1_add_listener(
+		output->fractional, &fractional_listener, output);
+	return true;
+}
 
 bool output_lock(struct output *output) {
 	struct display *display = output->display;
@@ -153,7 +223,7 @@ bool output_lock(struct output *output) {
 		output->viewport = wp_viewporter_get_viewport(
 			display->viewporter, output->surface);
 	}
-	if (output->viewport) {
+	if (output->viewport && attach_scale(output)) {
 		output->lock_surface = ext_session_lock_v1_get_lock_surface(
 			display->lock.wl, output->surface, output->wl);
 	}
@@ -167,10 +237,103 @@ bool output_lock(struct output *output) {
 	return true;
 }
 
-// the role object goes before its wl_surface, and both before the output
+static void drop_ui(struct output *output) {
+	for (int i = 0; i < UI_PARTS; i++) {
+		panel_destroy(output->panels[i]);
+		output->panels[i] = NULL;
+	}
+	ui_destroy(output->ui);
+	output->ui = NULL;
+}
+
+static bool create_ui(struct output *output, const struct ui_content *content) {
+	output->ui = ui_create(content, effective_scale(output));
+	if (!output->ui) {
+		return false;
+	}
+	for (int i = 0; i < UI_PARTS; i++) {
+		if (!ui_shows(content, (enum ui_part)i)) {
+			continue;
+		}
+		output->panels[i] = panel_create(
+			output->display, output->surface, (enum ui_part)i);
+		if (!output->panels[i]) {
+			return false;
+		}
+	}
+	output->relayout = true;
+	return true;
+}
+
+// a new panel position takes effect with the lock surface's next commit
+static bool place(struct output *output) {
+	uint32_t scale = effective_scale(output);
+	ui_set_scale(output->ui, scale);
+	bool moved = false;
+	for (int i = 0; i < UI_PARTS; i++) {
+		struct ui_rect rect;
+		if (output->panels[i] &&
+			(!ui_place((enum ui_part)i, output->width,
+				 output->height, scale, &rect) ||
+				!panel_place(output->panels[i], &rect, scale,
+					&moved))) {
+			return false;
+		}
+	}
+	if (moved) {
+		wl_surface_commit(output->surface);
+	}
+	output->relayout = false;
+	return true;
+}
+
+static bool render(
+	struct output *output, const struct ui_content *content, bool *ok) {
+	*ok = (output->ui || create_ui(output, content)) &&
+	      (!output->relayout || place(output));
+	bool committed = false;
+	for (int i = 0; *ok && i < UI_PARTS; i++) {
+		if (!output->panels[i]) {
+			continue;
+		}
+		enum panel_result result =
+			panel_render(output->panels[i], output->ui);
+		*ok = result != PANEL_FAILED;
+		committed |= result == PANEL_COMMITTED;
+	}
+	return committed;
+}
+
+bool output_render(struct output *output, const struct ui_content *content) {
+	if (!output->mapped || output->ui_failed) {
+		return false;
+	}
+	bool ok = true;
+	bool committed = render(output, content, &ok);
+	if (!ok) {
+		log_error("dropping the UI on output %s; it stays locked",
+			output->name);
+		drop_ui(output);
+		output->ui_failed = true;
+	}
+	return committed;
+}
+
+void output_mark_dirty(struct output *output, enum ui_part part) {
+	if (output->panels[part]) {
+		panel_mark_dirty(output->panels[part]);
+	}
+}
+
+// the UI goes first, then the role object before its wl_surface, and both
+// before the output
 void output_destroy(struct output *output) {
 	if (!output) {
 		return;
+	}
+	drop_ui(output);
+	if (output->fractional) {
+		wp_fractional_scale_v1_destroy(output->fractional);
 	}
 	if (output->lock_surface) {
 		ext_session_lock_surface_v1_destroy(output->lock_surface);

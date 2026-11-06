@@ -1,0 +1,20 @@
+#ifndef SWEETLOCK_RENDER_TEXT_H
+#define SWEETLOCK_RENDER_TEXT_H
+
+#include <cairo.h>
+#include <pango/pango.h>
+
+// one line, ellipsized at its width, with tabular figures
+PangoLayout *text_layout_create(void);
+
+// the layout reshapes on its next use
+void text_set_font(PangoLayout *layout, const char *family, PangoWeight weight,
+	double pixels, double width);
+
+// sets the text only when it differs, so an unchanged layout stays shaped
+void text_set(PangoLayout *layout, const char *text);
+
+void text_draw_centred(
+	cairo_t *cr, PangoLayout *layout, double width, double centre_y);
+
+#endif

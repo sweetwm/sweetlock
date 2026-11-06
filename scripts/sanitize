@@ -19,6 +19,12 @@ export LSAN_OPTIONS="${LSAN_OPTIONS:-suppressions=$PWD/scripts/lsan.supp:print_s
 
 ./build-asan/sweetlock --version >/dev/null
 
+# the whole UI draw path, without a compositor
+preview=$(mktemp -d /tmp/sweetlock-preview-XXXXXX)
+trap 'rm -rf "$preview"' EXIT
+./build-asan/sweetlock --no-config --preview "$preview/scene.png" \
+	--size 1280x720 --scale 1.5
+
 if [ -n "$(meson test -C build-asan --list 2>/dev/null)" ]; then
 	meson test -C build-asan --print-errorlogs
 else

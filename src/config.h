@@ -8,6 +8,8 @@
 enum {
 	CONFIG_MAX_BYTES = 64 * 1024,
 	CONFIG_ERROR_SIZE = 256,
+	// every string key, its NUL included
+	CONFIG_STRING_SIZE = 128,
 };
 
 struct color {
@@ -21,6 +23,24 @@ struct config {
 	struct {
 		struct color color;
 	} background;
+	struct {
+		bool enabled;
+		char format[CONFIG_STRING_SIZE];
+	} clock;
+	struct {
+		bool enabled;
+		char format[CONFIG_STRING_SIZE];
+	} date;
+	struct {
+		bool enabled;
+		// empty: the GECOS full name, then the login name
+		char text[CONFIG_STRING_SIZE];
+	} username;
+	struct {
+		char font[CONFIG_STRING_SIZE];
+		struct color foreground;
+		struct color muted;
+	} theme;
 };
 
 // one --set or alias, with key and value pointing into argv
