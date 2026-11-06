@@ -10,12 +10,14 @@
 #include "viewporter-client-protocol.h"
 #include "wayland/buffer.h"
 #include "wayland/output.h"
+#include "wayland/seat.h"
 
 // highest versions whose requests and events this code handles
 enum {
 	COMPOSITOR_VERSION = 4,
 	SHM_VERSION = 1,
 	OUTPUT_VERSION = 4,
+	SEAT_VERSION = 7,
 	VIEWPORTER_VERSION = 1,
 	LOCK_MANAGER_VERSION = 1,
 };
@@ -45,6 +47,18 @@ static void add_output(
 	}
 }
 
+static void add_seat(struct display *display, uint32_t name, uint32_t version) {
+	struct wl_seat *wl = bind(display->registry, name, &wl_seat_interface,
+		version, SEAT_VERSION);
+	struct seat *seat = wl ? seat_create(display, wl, name) : NULL;
+	if (!seat) {
+		log_error("failed to bind a seat");
+		display->failed = true;
+		return;
+	}
+	wl_list_insert(display->seats.prev, &seat->link);
+}
+
 static bool is(const char *interface, const struct wl_interface *wanted) {
 	return strcmp(interface, wanted->name) == 0;
 }
@@ -71,6 +85,8 @@ static void registry_global(void *data, struct wl_registry *registry,
 			LOCK_MANAGER_VERSION);
 	} else if (is(interface, &wl_output_interface)) {
 		add_output(display, name, version);
+	} else if (is(interface, &wl_seat_interface)) {
+		add_seat(display, name, version);
 	}
 }
 
@@ -84,6 +100,14 @@ static void registry_global_remove(
 			log_info("removed output %s", output->name);
 			wl_list_remove(&output->link);
 			output_destroy(output);
+			return;
+		}
+	}
+	struct seat *seat = NULL;
+	wl_list_for_each(seat, &display->seats, link) {
+		if (seat->global == name) {
+			wl_list_remove(&seat->link);
+			seat_destroy(seat);
 			return;
 		}
 	}
@@ -110,9 +134,11 @@ static const char *missing_global(const struct display *display) {
 	return NULL;
 }
 
-bool display_connect(struct display *display, const struct config *config) {
-	*display = (struct display){0};
+bool display_connect(struct display *display, const struct config *config,
+	struct input *input) {
+	*display = (struct display){.input = input};
 	wl_list_init(&display->outputs);
+	wl_list_init(&display->seats);
 	display->wl = wl_display_connect(NULL);
 	if (!display->wl) {
 		log_error("failed to connect to Wayland: %m");
@@ -174,6 +200,12 @@ void display_disconnect(struct display *display) {
 		return;
 	}
 	lock_abandon(&display->lock);
+	struct seat *seat = NULL;
+	struct seat *next_seat = NULL;
+	wl_list_for_each_safe(seat, next_seat, &display->seats, link) {
+		wl_list_remove(&seat->link);
+		seat_destroy(seat);
+	}
 	struct output *output = NULL;
 	struct output *next = NULL;
 	wl_list_for_each_safe(output, next, &display->outputs, link) {

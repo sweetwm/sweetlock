@@ -8,6 +8,8 @@
 #include "config.h"
 #include "wayland/lock.h"
 
+struct input;
+
 struct display {
 	struct wl_display *wl;
 	struct wl_registry *registry;
@@ -18,10 +20,14 @@ struct display {
 	struct wl_buffer *solid;
 	struct lock lock;
 	struct wl_list outputs;
+	struct wl_list seats;
+	// every seat's keyboard types into it
+	struct input *input;
 	bool failed;
 };
 
-bool display_connect(struct display *display, const struct config *config);
+bool display_connect(struct display *display, const struct config *config,
+	struct input *input);
 
 // requests the lock and a lock surface for every output
 bool display_lock(struct display *display, const struct timespec *start);

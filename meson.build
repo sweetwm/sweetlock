@@ -36,6 +36,9 @@ wayland_scanner = find_program(
 	native: true,
 )
 
+xkbcommon = dependency('xkbcommon')
+pam = dependency('pam')
+
 subdir('protocol')
 
 # vendored TOML parser: our sanitizers and fuzzer instrument it, but it is not
@@ -54,21 +57,43 @@ tomlc17_dep = declare_dependency(
 
 sweetlock_inc = include_directories('src')
 
+sweetlock_args = []
+test_pam_confdir = get_option('test_pam_confdir')
+if test_pam_confdir != ''
+	warning('test_pam_confdir is set: this sweetlock authenticates against '
+		+ test_pam_confdir + ', not the system PAM config')
+	sweetlock_args += '-DSWEETLOCK_TEST_PAM_CONFDIR="' + test_pam_confdir + '"'
+endif
+
 executable(
 	'sweetlock',
 	'src/main.c',
 	'src/app.c',
 	'src/args.c',
+	'src/auth/auth.c',
+	'src/auth/helper.c',
+	'src/auth/message.c',
 	'src/config/load.c',
 	'src/config/parse.c',
 	'src/config/schema.c',
+	'src/input/input.c',
+	'src/input/keyboard.c',
+	'src/input/password.c',
 	'src/log.c',
 	'src/wayland/buffer.c',
 	'src/wayland/display.c',
 	'src/wayland/lock.c',
 	'src/wayland/output.c',
+	'src/wayland/seat.c',
+	c_args: sweetlock_args,
 	include_directories: sweetlock_inc,
-	dependencies: [tomlc17_dep, wayland_client, sweetlock_protocols_dep],
+	dependencies: [
+		tomlc17_dep,
+		wayland_client,
+		sweetlock_protocols_dep,
+		xkbcommon,
+		pam,
+	],
 	install: true,
 )
 
