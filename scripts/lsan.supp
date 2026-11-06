@@ -1,1 +1,4 @@
 # suppress only whole-process caches inside libraries, never our own frames
+# fontconfig keeps the patterns Pango's process-wide font map matched until
+# FcFini, which a locker that exits never calls
+leak:libfontconfig.so

@@ -1,8 +1,11 @@
 #include "args.h"
 
+#include <errno.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "log.h"
+#include "scale.h"
 
 const char args_usage[] =
 	"Sweetlock - a screen locker for Wayland\n"
@@ -15,17 +18,29 @@ const char args_usage[] =
 	"  --set KEY=VALUE   Set any config key, e.g. "
 	"background.color=#000000\n"
 	"  --color HEX       Same as --set background.color=HEX\n"
+	"  --no-clock        Same as --set clock.enabled=false\n"
+	"  --no-date         Same as --set date.enabled=false\n"
+	"  --no-username     Same as --set username.enabled=false\n"
 	"  -f, --daemonize   Return once the screen is locked\n"
+	"  --preview FILE    Draw the lock screen to a PNG instead of locking\n"
+	"  --size WxH        Output size in pixels for --preview "
+	"(default 1920x1080)\n"
+	"  --scale S         Output scale for --preview (default 1)\n"
 	"  -h, --help        Print help\n"
 	"  -V, --version     Print version\n";
 
 struct alias {
 	const char *flag;
 	const char *key;
+	// set for a flag that takes no value
+	const char *value;
 };
 
 static const struct alias aliases[] = {
-	{"--color", "background.color"},
+	{"--color", "background.color", NULL},
+	{"--no-clock", "clock.enabled", "false"},
+	{"--no-date", "date.enabled", "false"},
+	{"--no-username", "username.enabled", "false"},
 };
 
 static bool is(const char *arg, const char *short_name, const char *name) {
@@ -65,10 +80,97 @@ static void set(struct args *args, const char *flag, const char *value) {
 	add(args, flag, value, (size_t)(equals - value), equals + 1);
 }
 
+static bool parse_side(
+	const char *text, char end, const char **rest, int32_t *out) {
+	if (*text < '0' || *text > '9') {
+		return false;
+	}
+	char *stop = NULL;
+	errno = 0;
+	long value = strtol(text, &stop, 10);
+	if (errno != 0 || *stop != end || value < 1 ||
+		value > ARGS_PREVIEW_SIZE_MAX) {
+		return false;
+	}
+	*out = (int32_t)value;
+	*rest = stop + 1;
+	return true;
+}
+
+static void parse_size(struct args *args, const char *flag, const char *text) {
+	int32_t width = 0;
+	int32_t height = 0;
+	const char *rest = text;
+	if (!parse_side(rest, 'x', &rest, &width) ||
+		!parse_side(rest, '\0', &rest, &height)) {
+		log_error("%s: expected WxH, each 1 to %d; ignoring it", flag,
+			ARGS_PREVIEW_SIZE_MAX);
+		return;
+	}
+	args->preview.width = width;
+	args->preview.height = height;
+}
+
+static void parse_scale(struct args *args, const char *flag, const char *text) {
+	char *stop = NULL;
+	errno = 0;
+	double value = strtod(text, &stop);
+	double scaled = value * (double)SCALE_DENOMINATOR;
+	// a scale that rounds to 0/120 is no scale at all
+	if (errno != 0 || stop == text || *stop != '\0' ||
+		!(scaled >= 0.5 && scaled <= (double)SCALE_MAX)) {
+		log_error("%s: expected a number above 0 and at most %d; "
+			  "ignoring it",
+			flag, SCALE_MAX / SCALE_DENOMINATOR);
+		return;
+	}
+	args->preview.scale = (uint32_t)(scaled + 0.5);
+}
+
+// flag is one that takes_value accepts
+static void parse_valued(
+	struct args *args, const char *flag, const char *value) {
+	if (strcmp(flag, "--config") == 0) {
+		args->config_path = value;
+	} else if (strcmp(flag, "--set") == 0) {
+		set(args, flag, value);
+	} else if (strcmp(flag, "--preview") == 0) {
+		args->preview.path = value;
+	} else if (strcmp(flag, "--size") == 0) {
+		parse_size(args, flag, value);
+	} else if (strcmp(flag, "--scale") == 0) {
+		parse_scale(args, flag, value);
+	} else {
+		const char *key = find_alias(flag)->key;
+		add(args, flag, key, strlen(key), value);
+	}
+}
+
+static bool takes_value(const char *flag) {
+	static const char *const flags[] = {
+		"--config", "--set", "--preview", "--size", "--scale"};
+	for (size_t i = 0; i < sizeof flags / sizeof flags[0]; i++) {
+		if (strcmp(flag, flags[i]) == 0) {
+			return true;
+		}
+	}
+	const struct alias *alias = find_alias(flag);
+	return alias && !alias->value;
+}
+
 void args_parse(struct args *args, int argc, char **argv) {
-	*args = (struct args){.action = ARGS_RUN};
+	*args = (struct args){
+		.action = ARGS_RUN,
+		.preview =
+			{
+				.width = 1920,
+				.height = 1080,
+				.scale = SCALE_DENOMINATOR,
+			},
+	};
 	for (int i = 1; i < argc; i++) {
 		const char *arg = argv[i];
+		const struct alias *alias = find_alias(arg);
 		if (is(arg, "-h", "--help")) {
 			args->action = ARGS_HELP;
 			return;
@@ -79,31 +181,21 @@ void args_parse(struct args *args, int argc, char **argv) {
 		}
 		if (is(arg, "-f", "--daemonize")) {
 			args->daemonize = true;
-			continue;
-		}
-		if (strcmp(arg, "--no-config") == 0) {
+		} else if (strcmp(arg, "--no-config") == 0) {
 			args->no_config = true;
-			continue;
-		}
-		bool config = strcmp(arg, "--config") == 0;
-		bool set_key = strcmp(arg, "--set") == 0;
-		const struct alias *alias = find_alias(arg);
-		// a bad flag must never stop the screen from locking
-		if (!config && !set_key && !alias) {
+		} else if (alias && alias->value) {
+			add(args, arg, alias->key, strlen(alias->key),
+				alias->value);
+		} else if (!takes_value(arg)) {
+			// a bad flag must never stop the screen from locking
 			log_error("ignoring unknown argument \"%s\"", arg);
-			continue;
-		}
-		if (i + 1 == argc) {
+		} else if (i + 1 == argc) {
 			log_error("%s: missing its value; ignoring it", arg);
-			continue;
-		}
-		const char *value = argv[++i];
-		if (config) {
-			args->config_path = value;
-		} else if (set_key) {
-			set(args, arg, value);
 		} else {
-			add(args, arg, alias->key, strlen(alias->key), value);
+			parse_valued(args, arg, argv[++i]);
 		}
+	}
+	if (args->preview.path) {
+		args->action = ARGS_PREVIEW;
 	}
 }

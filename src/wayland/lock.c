@@ -5,11 +5,11 @@
 #include "ext-session-lock-v1-client-protocol.h"
 #include "log.h"
 
-static double elapsed_ms(const struct timespec *start) {
+double lock_elapsed_ms(const struct lock *lock) {
 	struct timespec now = {0};
 	clock_gettime(CLOCK_MONOTONIC, &now);
-	return (double)(now.tv_sec - start->tv_sec) * 1e3 +
-	       (double)(now.tv_nsec - start->tv_nsec) / 1e6;
+	return (double)(now.tv_sec - lock->start.tv_sec) * 1e3 +
+	       (double)(now.tv_nsec - lock->start.tv_nsec) / 1e6;
 }
 
 static void send_unlock(struct lock *lock) {
@@ -25,7 +25,7 @@ static void lock_locked(void *data, struct ext_session_lock_v1 *wl) {
 		return;
 	}
 	lock->state = LOCK_LOCKED;
-	log_info("locked in %.1f ms", elapsed_ms(&lock->start));
+	log_info("locked in %.1f ms", lock_elapsed_ms(lock));
 	if (lock->unlock_pending) {
 		send_unlock(lock);
 	}

@@ -29,6 +29,9 @@ bool lock_request(struct lock *lock,
 
 void lock_unlock(struct lock *lock);
 
+// since main started, for the timing log lines
+double lock_elapsed_ms(const struct lock *lock);
+
 // forgets the proxy without a request, so the session stays locked
 void lock_abandon(struct lock *lock);
 

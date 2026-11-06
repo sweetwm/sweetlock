@@ -1,3 +1,4 @@
+#include <locale.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -34,6 +35,11 @@ int main(int argc, char **argv) {
 	config_load(&config, args.config_path, args.no_config);
 	config_override(&config, args.overrides, args.override_count);
 	config_log(&config);
+	// only LC_TIME: a different LC_NUMERIC would change how numbers parse
+	setlocale(LC_TIME, "");
+	if (args.action == ARGS_PREVIEW) {
+		return app_preview(&config, &args.preview);
+	}
 	// -f forks here, before the PAM helper and any library thread
 	int locked_fd = args.daemonize ? app_daemonize() : -1;
 	return app_run(&config, &start, locked_fd);

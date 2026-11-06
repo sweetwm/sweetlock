@@ -19,6 +19,8 @@
             meson
             ninja
             pkg-config
+            cairo
+            pango
             wayland
             wayland-protocols
             wayland-scanner

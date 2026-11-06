@@ -1,18 +1,41 @@
+#include <assert.h>
 #include <stdio.h>
 #include <string.h>
 
 #include "config.h"
 #include "config/internal.h"
 #include "log.h"
+#include "utf8.h"
 
 static const struct config defaults = {
 	.background = {.color = {0x1f, 0x1b, 0x2e, 0xff}},
+	.clock = {.enabled = true, .format = "%H:%M"},
+	.date = {.enabled = true, .format = "%A, %B %-d"},
+	.username = {.enabled = true, .text = ""},
+	.theme =
+		{
+			.font = "sans-serif",
+			.foreground = {0xe8, 0xe6, 0xf0, 0xff},
+			.muted = {0xa9, 0xa4, 0xbd, 0xff},
+		},
 };
 
+#define KEY(path, type, field) {path, type, offsetof(struct config, field)}
+
 static const struct config_key keys[] = {
-	{"background.color", CONFIG_COLOR,
-		offsetof(struct config, background.color)},
+	KEY("background.color", CONFIG_COLOR, background.color),
+	KEY("clock.enabled", CONFIG_BOOL, clock.enabled),
+	KEY("clock.format", CONFIG_STRING, clock.format),
+	KEY("date.enabled", CONFIG_BOOL, date.enabled),
+	KEY("date.format", CONFIG_STRING, date.format),
+	KEY("username.enabled", CONFIG_BOOL, username.enabled),
+	KEY("username.text", CONFIG_STRING, username.text),
+	KEY("theme.font", CONFIG_STRING, theme.font),
+	KEY("theme.foreground", CONFIG_COLOR, theme.foreground),
+	KEY("theme.muted", CONFIG_COLOR, theme.muted),
 };
+
+#undef KEY
 
 static const size_t key_count = sizeof keys / sizeof keys[0];
 
@@ -72,20 +95,66 @@ static bool parse_color(const char *text, size_t length, struct color *out) {
 	return true;
 }
 
-bool config_key_set(struct config *config, const struct config_key *key,
-	const char *value, size_t length, char *error, size_t error_size) {
-	void *field = (char *)config + key->offset;
-	switch (key->type) {
-	case CONFIG_COLOR:
-		if (!parse_color(value, length, field)) {
-			snprintf(error, error_size,
-				"%s: expected \"#rrggbb\" or \"#rrggbbaa\"",
-				key->path);
-			return false;
-		}
+static bool equals(const char *text, size_t length, const char *word) {
+	return strlen(word) == length && memcmp(text, word, length) == 0;
+}
+
+static bool parse_bool(const char *text, size_t length, bool *out) {
+	if (equals(text, length, "true") || equals(text, length, "false")) {
+		*out = length == 4;
 		return true;
 	}
 	return false;
+}
+
+// the text is shown or handed to strftime and Pango, so no controls
+static bool parse_string(const char *text, size_t length, char *out) {
+	if (length >= CONFIG_STRING_SIZE || !utf8_is_plain(text, length)) {
+		return false;
+	}
+	memcpy(out, text, length);
+	// zeroed past the end, so two equal configs compare equal byte for byte
+	memset(out + length, 0, CONFIG_STRING_SIZE - length);
+	return true;
+}
+
+// the string message spells out the limit
+static_assert(CONFIG_STRING_SIZE == 128, "update the string message");
+
+const char *config_key_expected(const struct config_key *key) {
+	switch (key->type) {
+	case CONFIG_BOOL:
+		return "expected true or false";
+	case CONFIG_COLOR:
+		return "expected \"#rrggbb\" or \"#rrggbbaa\"";
+	case CONFIG_STRING:
+		return "expected a string of at most 127 bytes of UTF-8 "
+		       "without control characters";
+	}
+	return "unexpected value";
+}
+
+static bool parse(const struct config_key *key, const char *value,
+	size_t length, void *field) {
+	switch (key->type) {
+	case CONFIG_BOOL:
+		return parse_bool(value, length, field);
+	case CONFIG_COLOR:
+		return parse_color(value, length, field);
+	case CONFIG_STRING:
+		return parse_string(value, length, field);
+	}
+	return false;
+}
+
+bool config_key_set(struct config *config, const struct config_key *key,
+	const char *value, size_t length, char *error, size_t error_size) {
+	if (!parse(key, value, length, (char *)config + key->offset)) {
+		snprintf(error, error_size, "%s: %s", key->path,
+			config_key_expected(key));
+		return false;
+	}
+	return true;
 }
 
 bool config_set(struct config *config, const char *key, size_t key_length,
@@ -104,12 +173,20 @@ void config_log(const struct config *config) {
 	for (size_t i = 0; i < key_count; i++) {
 		const void *field = (const char *)config + keys[i].offset;
 		switch (keys[i].type) {
+		case CONFIG_BOOL:
+			log_debug("config %s=%s", keys[i].path,
+				*(const bool *)field ? "true" : "false");
+			break;
 		case CONFIG_COLOR: {
 			const struct color *c = field;
 			log_debug("config %s=#%02x%02x%02x%02x", keys[i].path,
 				c->red, c->green, c->blue, c->alpha);
 			break;
 		}
+		case CONFIG_STRING:
+			log_debug("config %s=\"%s\"", keys[i].path,
+				(const char *)field);
+			break;
 		}
 	}
 }

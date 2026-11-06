@@ -13,6 +13,8 @@
 #include "auth/auth.h"
 #include "input/input.h"
 #include "log.h"
+#include "ui/clock.h"
+#include "ui/ui.h"
 #include "wayland/display.h"
 
 enum {
@@ -20,13 +22,25 @@ enum {
 	FD_SIGNAL,
 	FD_AUTH,
 	FD_REPEAT,
+	FD_CLOCK,
 	FD_COUNT,
+};
+
+enum ui_stage {
+	STAGE_WAITING,
+	STAGE_STARTED,
+	// the first frame is committed and its time logged
+	STAGE_SHOWN,
 };
 
 struct app {
 	struct auth auth;
 	struct input input;
 	struct display display;
+	struct clock clock;
+	const struct config *config;
+	struct ui_content content;
+	enum ui_stage stage;
 	int signal_fd;
 	// -f only: reported and closed once the lock is confirmed
 	int locked_fd;
@@ -110,6 +124,9 @@ static bool handle_fds(struct app *app, const struct pollfd *fds) {
 	if (fds[FD_REPEAT].revents & POLLIN) {
 		input_repeat(&app->input);
 	}
+	if ((fds[FD_CLOCK].revents & POLLIN) && clock_update(&app->clock)) {
+		display_mark_dirty(&app->display, UI_CLOCK);
+	}
 	return true;
 }
 
@@ -142,6 +159,37 @@ static void report_locked(struct app *app) {
 	}
 }
 
+// only after locked, so fontconfig's load never delays it, drawing from the
+// loop makes a burst of events cost one frame
+static void render(struct app *app) {
+	struct display *display = &app->display;
+	if (display->lock.state != LOCK_LOCKED) {
+		return;
+	}
+	if (app->stage == STAGE_WAITING) {
+		ui_content_init(&app->content, app->config, &app->clock);
+		app->stage = STAGE_STARTED;
+	}
+	if (display_render(display, &app->content) &&
+		app->stage == STAGE_STARTED) {
+		log_info("first UI frame in %.1f ms",
+			lock_elapsed_ms(&display->lock));
+		app->stage = STAGE_SHOWN;
+	}
+}
+
+// a full socket waits for POLLOUT; false when the connection is gone
+static bool flush(struct wl_display *wl, short *events) {
+	*events = POLLIN;
+	if (wl_display_flush(wl) < 0) {
+		if (errno != EAGAIN) {
+			return false;
+		}
+		*events |= POLLOUT;
+	}
+	return true;
+}
+
 static int run(struct app *app) {
 	struct display *display = &app->display;
 	struct wl_display *wl = display->wl;
@@ -150,6 +198,7 @@ static int run(struct app *app) {
 		[FD_SIGNAL] = {.fd = app->signal_fd, .events = POLLIN},
 		[FD_AUTH] = {.fd = app->auth.fd, .events = POLLIN},
 		[FD_REPEAT] = {.fd = app->input.repeat_fd, .events = POLLIN},
+		[FD_CLOCK] = {.events = POLLIN},
 	};
 
 	for (;;) {
@@ -164,13 +213,12 @@ static int run(struct app *app) {
 			wl_display_cancel_read(wl);
 			return stop(display);
 		}
-		fds[FD_WAYLAND].events = POLLIN;
-		if (wl_display_flush(wl) < 0) {
-			if (errno != EAGAIN) {
-				wl_display_cancel_read(wl);
-				goto lost;
-			}
-			fds[FD_WAYLAND].events |= POLLOUT;
+		render(app);
+		// poll skips it while negative, until the clock starts
+		fds[FD_CLOCK].fd = app->clock.fd;
+		if (!flush(wl, &fds[FD_WAYLAND].events)) {
+			wl_display_cancel_read(wl);
+			goto lost;
 		}
 
 		if (poll(fds, FD_COUNT, -1) < 0) {
@@ -219,6 +267,8 @@ int app_run(const struct config *config, const struct timespec *start,
 	struct app app = {
 		.auth = {.pid = -1, .fd = -1},
 		.input = {.repeat_fd = -1},
+		.clock = {.fd = -1},
+		.config = config,
 		.signal_fd = -1,
 		.locked_fd = locked_fd,
 	};
@@ -232,6 +282,7 @@ int app_run(const struct config *config, const struct timespec *start,
 		status = run(&app);
 	}
 	display_disconnect(&app.display);
+	clock_stop(&app.clock);
 	input_finish(&app.input);
 	if (app.signal_fd >= 0) {
 		close(app.signal_fd);

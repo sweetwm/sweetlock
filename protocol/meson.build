@@ -3,6 +3,7 @@ wl_protocol_dir = wayland_protocols.get_variable('pkgdatadir')
 protocols = [
 	wl_protocol_dir / 'stable' / 'viewporter' / 'viewporter.xml',
 	wl_protocol_dir / 'staging' / 'ext-session-lock' / 'ext-session-lock-v1.xml',
+	wl_protocol_dir / 'staging' / 'fractional-scale' / 'fractional-scale-v1.xml',
 ]
 
 protocol_src = []
