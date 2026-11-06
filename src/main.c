@@ -1,12 +1,19 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
+#include "app.h"
 #include "args.h"
 #include "config.h"
 #include "log.h"
 
 int main(int argc, char **argv) {
+	struct timespec start = {0};
+	clock_gettime(CLOCK_MONOTONIC, &start);
 	bool log_level_ok = log_init();
+	if (!app_protect()) {
+		return EXIT_FAILURE;
+	}
 	struct args args;
 	args_parse(&args, argc, argv);
 	if (args.action == ARGS_HELP) {
@@ -27,7 +34,5 @@ int main(int argc, char **argv) {
 	config_load(&config, args.config_path, args.no_config);
 	config_override(&config, args.overrides, args.override_count);
 	config_log(&config);
-
-	log_error("locking is not implemented yet");
-	return EXIT_FAILURE;
+	return app_run(&config, &start);
 }
