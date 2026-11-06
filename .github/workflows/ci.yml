@@ -19,7 +19,7 @@ concurrency:
 env:
   PACMAN_DEPS: >-
     base-devel git meson ninja pkgconf clang valgrind
-    wayland wayland-protocols
+    wayland wayland-protocols libxkbcommon pam
   PACMAN_LINT_DEPS: >-
     git actionlint shellcheck
 

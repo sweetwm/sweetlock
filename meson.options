@@ -1,0 +1,6 @@
+option(
+	'test_pam_confdir',
+	type: 'string',
+	value: '',
+	description: 'PAM config directory for test builds only; never set it for a locker you use',
+)
