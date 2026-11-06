@@ -28,11 +28,32 @@ add_project_arguments(
 
 fs = import('fs')
 
+# vendored TOML parser: our sanitizers and fuzzer instrument it, but it is not
+# written to our warning flags
+tomlc17_dep = declare_dependency(
+	link_with: static_library(
+		'tomlc17',
+		'third_party/tomlc17/tomlc17.c',
+		c_args: '-w',
+	),
+	include_directories: include_directories(
+		'third_party/tomlc17',
+		is_system: true,
+	),
+)
+
+sweetlock_inc = include_directories('src')
+
 executable(
 	'sweetlock',
 	'src/main.c',
+	'src/args.c',
+	'src/config/load.c',
+	'src/config/parse.c',
+	'src/config/schema.c',
 	'src/log.c',
-	include_directories: include_directories('src'),
+	include_directories: sweetlock_inc,
+	dependencies: tomlc17_dep,
 	install: true,
 )
 

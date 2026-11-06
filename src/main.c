@@ -1,35 +1,21 @@
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
+#include "args.h"
+#include "config.h"
 #include "log.h"
-
-static const char usage[] = "Sweetlock - a screen locker for Wayland\n"
-			    "\n"
-			    "Usage: sweetlock [OPTIONS]\n"
-			    "\n"
-			    "Options:\n"
-			    "  -h, --help     Print help\n"
-			    "  -V, --version  Print version\n";
-
-static bool is(const char *arg, const char *short_name, const char *name) {
-	return strcmp(arg, short_name) == 0 || strcmp(arg, name) == 0;
-}
 
 int main(int argc, char **argv) {
 	bool log_level_ok = log_init();
-	for (int i = 1; i < argc; i++) {
-		if (is(argv[i], "-h", "--help")) {
-			fputs(usage, stdout);
-			return EXIT_SUCCESS;
-		}
-		if (is(argv[i], "-V", "--version")) {
-			puts("sweetlock " SWEETLOCK_VERSION);
-			return EXIT_SUCCESS;
-		}
-		// a bad flag must never stop the screen from locking
-		log_error("ignoring unknown argument \"%s\"", argv[i]);
+	struct args args;
+	args_parse(&args, argc, argv);
+	if (args.action == ARGS_HELP) {
+		fputs(args_usage, stdout);
+		return EXIT_SUCCESS;
+	}
+	if (args.action == ARGS_VERSION) {
+		puts("sweetlock " SWEETLOCK_VERSION);
+		return EXIT_SUCCESS;
 	}
 
 	if (!log_level_ok) {
@@ -37,6 +23,11 @@ int main(int argc, char **argv) {
 			 "using info");
 	}
 	log_info("starting Sweetlock version=%s", SWEETLOCK_VERSION);
+	struct config config;
+	config_load(&config, args.config_path, args.no_config);
+	config_override(&config, args.overrides, args.override_count);
+	config_log(&config);
+
 	log_error("locking is not implemented yet");
 	return EXIT_FAILURE;
 }
