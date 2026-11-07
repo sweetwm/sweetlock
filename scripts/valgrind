@@ -33,10 +33,11 @@ valgrind \
 	--error-exitcode=125 \
 	./build-valgrind/sweetlock --no-config --preview "$preview/scene.png" \
 	--size 1280x720 --scale 1.5 --set background.mode=layered
-# the first preview is a PNG to decode as the avatar
+# the first preview is a PNG to decode as the avatar and the wallpaper
 valgrind \
 	--leak-check=no \
 	--track-origins=yes \
 	--error-exitcode=125 \
 	./build-valgrind/sweetlock --no-config --preview "$preview/avatar.png" \
-	--set avatar.path="$preview/scene.png" --preview-state revealed
+	--set avatar.path="$preview/scene.png" --preview-state revealed \
+	--image "$preview/scene.png" --blur 8 --dim 35

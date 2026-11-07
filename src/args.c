@@ -18,6 +18,11 @@ const char args_usage[] =
 	"  --set KEY=VALUE   Set any config key, e.g. "
 	"background.color=#000000\n"
 	"  --color HEX       Same as --set background.color=HEX\n"
+	"  --image PATH      Same as --set background.mode=image\n"
+	"                    --set background.image.path=PATH\n"
+	"  --fit MODE        Same as --set background.image.fit=MODE\n"
+	"  --dim N           Same as --set background.image.dim=N\n"
+	"  --blur N          Same as --set background.image.blur=N\n"
 	"  --no-clock        Same as --set clock.enabled=false\n"
 	"  --no-date         Same as --set date.enabled=false\n"
 	"  --no-avatar       Same as --set avatar.enabled=false\n"
@@ -43,6 +48,10 @@ struct alias {
 
 static const struct alias aliases[] = {
 	{"--color", "background.color", NULL},
+	{"--image", "background.image.path", NULL},
+	{"--fit", "background.image.fit", NULL},
+	{"--dim", "background.image.dim", NULL},
+	{"--blur", "background.image.blur", NULL},
 	{"--no-clock", "clock.enabled", "false"},
 	{"--no-date", "date.enabled", "false"},
 	{"--no-avatar", "avatar.enabled", "false"},
@@ -169,6 +178,11 @@ static void parse_valued(
 		parse_state(args, flag, value);
 	} else {
 		const char *key = find_alias(flag)->key;
+		// a path alone would not show the image
+		if (strcmp(flag, "--image") == 0) {
+			add(args, flag, "background.mode",
+				strlen("background.mode"), "image");
+		}
 		add(args, flag, key, strlen(key), value);
 	}
 }

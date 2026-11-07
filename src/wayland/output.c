@@ -249,11 +249,13 @@ void output_show_background(
 	uint32_t scale = effective_scale(output);
 	int32_t width = scale_physical(scale, output->width);
 	int32_t height = scale_physical(scale, output->height);
+	uint32_t shared = background_scale(content->config, scale);
 	struct backdrop *wanted = output->backdrop;
-	if (!wanted || wanted->width != width || wanted->height != height) {
+	if (!wanted || wanted->width != width || wanted->height != height ||
+		wanted->scale != shared) {
 		backdrop_put(wanted);
 		output->backdrop = backdrop_get(output->display,
-			content->config, content->worker, width, height);
+			content->config, content->worker, width, height, scale);
 		wanted = output->backdrop;
 	}
 	if (!wanted || wanted->state != BACKDROP_READY ||

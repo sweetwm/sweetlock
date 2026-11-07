@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "jpeg.h"
+
 enum {
 	PNG_SIGNATURE_SIZE = 8,
 	IHDR_LENGTH = 13,
@@ -33,6 +35,55 @@ bool image_png_size(const unsigned char *data, size_t length, uint32_t *width,
 	return true;
 }
 
+static uint32_t big_endian16(const unsigned char *bytes) {
+	return (uint32_t)bytes[0] << 8 | bytes[1];
+}
+
+// walks the marker segments to the first frame header, as libjpeg does
+bool image_jpeg_size(const unsigned char *data, size_t length, uint32_t *width,
+	uint32_t *height) {
+	if (length < 2 || data[0] != 0xff || data[1] != 0xd8) {
+		return false;
+	}
+	size_t at = 2;
+	while (length - at >= 4 && data[at] == 0xff) {
+		unsigned char marker = data[at + 1];
+		// fill bytes, and markers with no segment
+		if (marker == 0xff || marker == 0x01 ||
+			(marker >= 0xd0 && marker <= 0xd7)) {
+			at += marker == 0xff ? 1 : 2;
+			continue;
+		}
+		// SOF0 to SOF15, which leave out DHT, JPG and DAC
+		bool frame = marker >= 0xc0 && marker <= 0xcf &&
+			     marker != 0xc4 && marker != 0xc8 && marker != 0xcc;
+		size_t segment = big_endian16(data + at + 2);
+		if (frame && segment >= 8 && length - at >= 9) {
+			*height = big_endian16(data + at + 5);
+			*width = big_endian16(data + at + 7);
+			return true;
+		}
+		// a scan or the end before any frame, or a truncated segment
+		if (frame || marker == 0xda || marker == 0xd9 || segment < 2 ||
+			segment > length - at - 2) {
+			return false;
+		}
+		at += 2 + segment;
+	}
+	return false;
+}
+
+enum image_format image_probe(const unsigned char *data, size_t length,
+	uint32_t *width, uint32_t *height) {
+	if (image_png_size(data, length, width, height)) {
+		return IMAGE_PNG;
+	}
+	if (image_jpeg_size(data, length, width, height)) {
+		return IMAGE_JPEG;
+	}
+	return IMAGE_UNKNOWN;
+}
+
 struct reader {
 	const unsigned char *data;
 	size_t length;
@@ -56,21 +107,8 @@ static bool fits(uint32_t width, uint32_t height) {
 	       (uint64_t)width * height <= IMAGE_PIXELS_MAX;
 }
 
-static cairo_surface_t *decode(const unsigned char *data, size_t length,
-	char *error, size_t error_size) {
-	uint32_t width = 0;
-	uint32_t height = 0;
-	if (!image_png_size(data, length, &width, &height)) {
-		snprintf(error, error_size, "not a PNG image");
-		return NULL;
-	}
-	if (!fits(width, height)) {
-		snprintf(error, error_size,
-			"%" PRIu32 "x%" PRIu32
-			" is past the limit of %d pixels",
-			width, height, IMAGE_PIXELS_MAX);
-		return NULL;
-	}
+static cairo_surface_t *decode_png(const unsigned char *data, size_t length,
+	uint32_t width, uint32_t height, char *error, size_t error_size) {
 	struct reader reader = {.data = data, .length = length};
 	cairo_surface_t *image =
 		cairo_image_surface_create_from_png_stream(read_png, &reader);
@@ -90,6 +128,30 @@ static cairo_surface_t *decode(const unsigned char *data, size_t length,
 	return image;
 }
 
+cairo_surface_t *image_decode(const unsigned char *data, size_t length,
+	double fraction, char *error, size_t error_size) {
+	uint32_t width = 0;
+	uint32_t height = 0;
+	enum image_format format = image_probe(data, length, &width, &height);
+	if (format == IMAGE_UNKNOWN) {
+		snprintf(error, error_size, "not a PNG or JPEG image");
+		return NULL;
+	}
+	if (!fits(width, height)) {
+		snprintf(error, error_size,
+			"%" PRIu32 "x%" PRIu32
+			" is past the limit of %d pixels",
+			width, height, IMAGE_PIXELS_MAX);
+		return NULL;
+	}
+	if (format == IMAGE_PNG) {
+		return decode_png(
+			data, length, width, height, error, error_size);
+	}
+	return image_jpeg_decode(
+		data, length, width, height, fraction, error, error_size);
+}
+
 enum file_result image_load(const char *path, cairo_surface_t **image,
 	char *error, size_t error_size) {
 	*image = NULL;
@@ -98,8 +160,8 @@ enum file_result image_load(const char *path, cairo_surface_t **image,
 	enum file_result result = file_read(
 		path, IMAGE_FILE_MAX, &data, &length, error, error_size);
 	if (result == FILE_OK) {
-		*image = decode(
-			(const unsigned char *)data, length, error, error_size);
+		*image = image_decode((const unsigned char *)data, length, 1,
+			error, error_size);
 		result = *image ? FILE_OK : FILE_FAILED;
 	}
 	free(data);

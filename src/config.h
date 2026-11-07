@@ -22,6 +22,14 @@ enum background_mode {
 	BACKGROUND_GRADIENT,
 	BACKGROUND_RADIAL,
 	BACKGROUND_LAYERED,
+	BACKGROUND_IMAGE,
+};
+
+enum background_fit {
+	FIT_FILL,
+	FIT_FIT,
+	FIT_CENTER,
+	FIT_STRETCH,
 };
 
 struct color {
@@ -55,6 +63,13 @@ struct config_blob {
 	int32_t size;
 };
 
+struct config_image {
+	char path[CONFIG_PATH_SIZE];
+	enum background_fit fit;
+	int32_t dim;
+	int32_t blur;
+};
+
 struct config {
 	struct {
 		enum background_mode mode;
@@ -66,6 +81,7 @@ struct config {
 			int32_t blob_count;
 			struct config_blob blob[CONFIG_BLOBS_MAX];
 		} layered;
+		struct config_image image;
 	} background;
 	struct {
 		bool enabled;

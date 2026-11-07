@@ -3,6 +3,7 @@
 #include "app.h"
 #include "auth/auth.h"
 #include "background/draw.h"
+#include "background/job.h"
 #include "input/input.h"
 #include "input/password.h"
 #include "log.h"
@@ -33,8 +34,15 @@ static bool draw_part(struct ui *ui, enum ui_part part, cairo_t *cr,
 
 static bool draw(cairo_t *cr, const struct ui_content *content,
 	const struct preview *preview) {
-	if (!background_draw(content->config, cairo_get_target(cr))) {
-		return false;
+	char error[BACKGROUND_ERROR_SIZE] = "";
+	cairo_surface_t *target = cairo_get_target(cr);
+	// as when locked, a failed image leaves the base colour
+	if (!background_paint(content->config, preview->scale, target, error,
+		    sizeof error)) {
+		log_warn("background: %s; keeping the base colour", error);
+		if (!background_draw(content->config, target)) {
+			return false;
+		}
 	}
 	struct ui *ui = ui_create(content, preview->scale);
 	if (!ui) {

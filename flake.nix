@@ -26,6 +26,7 @@
             wayland-scanner
             libxkbcommon
             linux-pam
+            libjpeg
             # Newest LLVM, to match the rolling Arch CI image. clang-tools
             # comes first so its wrapped clang-tidy finds the libc headers
             llvmPackages_latest.clang-tools
