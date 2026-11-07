@@ -38,6 +38,8 @@ struct ui_content {
 	const struct input *input;
 	const struct auth *auth;
 	const struct field *field;
+	// NULL loads in the foreground, as the preview does
+	struct worker *worker;
 	struct user user;
 	struct avatar avatar;
 };
@@ -59,8 +61,7 @@ struct ui {
 	char dots[UI_DOTS_MAX * 3 + 1];
 };
 
-void ui_content_start(
-	struct ui_content *content, struct clock *clock, struct worker *worker);
+void ui_content_start(struct ui_content *content, struct clock *clock);
 
 // after the worker has stopped
 void ui_content_finish(struct ui_content *content);

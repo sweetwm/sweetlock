@@ -24,6 +24,7 @@ struct worker {
 
 bool worker_start(struct worker *worker);
 
+// jobs run in the order they were submitted
 void worker_submit(struct worker *worker, struct worker_job *job);
 
 // call when fd is readable; the finished jobs, newest first

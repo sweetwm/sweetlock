@@ -23,8 +23,8 @@ struct buffer {
 
 struct wl_buffer *buffer_solid(struct wl_shm *shm, struct color color);
 
-// logs and returns NULL on failure, the pixels start fully transparent
-struct buffer *buffer_create(struct wl_shm *shm, int32_t width, int32_t height);
+struct buffer *buffer_create(
+	struct wl_shm *shm, int32_t width, int32_t height, bool opaque);
 
 void buffer_destroy(struct buffer *buffer);
 

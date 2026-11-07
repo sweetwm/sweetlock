@@ -23,7 +23,7 @@ valgrind \
 	--error-exitcode=125 \
 	./build-valgrind/sweetlock --version
 
-# the whole UI draw path, without a compositor; fontconfig and GLib keep
+# the whole UI and background draw path, without a compositor; fontconfig and GLib keep
 # process-wide caches, so leaks are left to LeakSanitizer and its suppressions
 preview=$(mktemp -d /tmp/sweetlock-preview-XXXXXX)
 trap 'rm -rf "$preview"' EXIT
@@ -32,7 +32,7 @@ valgrind \
 	--track-origins=yes \
 	--error-exitcode=125 \
 	./build-valgrind/sweetlock --no-config --preview "$preview/scene.png" \
-	--size 1280x720 --scale 1.5
+	--size 1280x720 --scale 1.5 --set background.mode=layered
 # the first preview is a PNG to decode as the avatar
 valgrind \
 	--leak-check=no \

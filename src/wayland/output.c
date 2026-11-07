@@ -4,11 +4,14 @@
 #include <stdlib.h>
 #include <wayland-client.h>
 
+#include "config.h"
 #include "ext-session-lock-v1-client-protocol.h"
 #include "fractional-scale-v1-client-protocol.h"
 #include "log.h"
 #include "scale.h"
 #include "viewporter-client-protocol.h"
+#include "wayland/backdrop.h"
+#include "wayland/buffer.h"
 #include "wayland/display.h"
 #include "wayland/panel.h"
 
@@ -146,8 +149,6 @@ static void set_opaque(struct output *output, int32_t width, int32_t height) {
 	}
 }
 
-// the 1x1 buffer is stretched by the viewport, so a new size needs no new
-// buffer
 static void lock_surface_configure(void *data,
 	struct ext_session_lock_surface_v1 *lock_surface, uint32_t serial,
 	uint32_t width, uint32_t height) {
@@ -199,7 +200,8 @@ static const struct wp_fractional_scale_v1_listener fractional_listener = {
 	.preferred_scale = preferred_scale,
 };
 
-// the background is a 1x1 buffer, so only the UI follows the scale
+// the first frame is a 1x1 buffer, so the scale waits for the UI and the
+// generated background
 static bool attach_scale(struct output *output) {
 	struct display *display = output->display;
 	if (!display->fractional_scale) {
@@ -235,6 +237,35 @@ bool output_lock(struct output *output) {
 	ext_session_lock_surface_v1_add_listener(
 		output->lock_surface, &lock_surface_listener, output);
 	return true;
+}
+
+// until a new size's background is ready, the old one is stretched over it
+void output_show_background(
+	struct output *output, const struct ui_content *content) {
+	if (!output->mapped ||
+		content->config->background.mode == BACKGROUND_SOLID) {
+		return;
+	}
+	uint32_t scale = effective_scale(output);
+	int32_t width = scale_physical(scale, output->width);
+	int32_t height = scale_physical(scale, output->height);
+	struct backdrop *wanted = output->backdrop;
+	if (!wanted || wanted->width != width || wanted->height != height) {
+		backdrop_put(wanted);
+		output->backdrop = backdrop_get(output->display,
+			content->config, content->worker, width, height);
+		wanted = output->backdrop;
+	}
+	if (!wanted || wanted->state != BACKDROP_READY ||
+		output->shown == wanted) {
+		return;
+	}
+	wl_surface_attach(output->surface, wanted->buffer->wl, 0, 0);
+	wl_surface_damage(output->surface, 0, 0, output->width, output->height);
+	wl_surface_commit(output->surface);
+	wanted->refs++;
+	backdrop_put(output->shown);
+	output->shown = wanted;
 }
 
 static void drop_ui(struct output *output) {
@@ -305,6 +336,7 @@ static bool render(
 }
 
 bool output_render(struct output *output, const struct ui_content *content) {
+	output_show_background(output, content);
 	if (!output->mapped || output->ui_failed) {
 		return false;
 	}
@@ -352,6 +384,8 @@ void output_destroy(struct output *output) {
 	if (output->surface) {
 		wl_surface_destroy(output->surface);
 	}
+	backdrop_put(output->backdrop);
+	backdrop_put(output->shown);
 	release(output->wl);
 	free(output);
 }

@@ -1,3 +1,4 @@
+#include <inttypes.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,6 +16,7 @@ enum {
 struct walk {
 	struct config *config;
 	char path[PATH_SIZE];
+	size_t index;
 	char *error;
 	size_t error_size;
 };
@@ -39,19 +41,58 @@ static bool unknown(struct walk *w, size_t length) {
 	return fail(w, "%.*s: unknown key", (int)length, w->path);
 }
 
-// a TOML boolean goes through the setter as text, the same path as a flag
+// TOML booleans and integers go through the setter as text, the same path
+// as a flag
 static bool value(
 	struct walk *w, const struct config_key *key, toml_datum_t datum) {
+	char text[32] = "";
+	const char *source = text;
+	size_t length = 0;
 	if (key->type == CONFIG_BOOL && datum.type == TOML_BOOLEAN) {
-		const char *text = datum.u.boolean ? "true" : "false";
-		return config_key_set(w->config, key, text, strlen(text),
-			w->error, w->error_size);
+		length = (size_t)snprintf(text, sizeof text, "%s",
+			datum.u.boolean ? "true" : "false");
+	} else if (key->type == CONFIG_INT && datum.type == TOML_INT64) {
+		length = (size_t)snprintf(
+			text, sizeof text, "%" PRId64, datum.u.int64);
+	} else if (key->type != CONFIG_BOOL && key->type != CONFIG_INT &&
+		   datum.type == TOML_STRING) {
+		source = datum.u.str.ptr;
+		length = (size_t)datum.u.str.len;
+	} else {
+		return config_key_fail(key, w->error, w->error_size);
 	}
-	if (key->type == CONFIG_BOOL || datum.type != TOML_STRING) {
-		return fail(w, "%s: %s", key->path, config_key_expected(key));
+	return config_key_set(w->config, key, w->index, source, length,
+		w->error, w->error_size);
+}
+
+static bool table(struct walk *w, size_t prefix, toml_datum_t datum);
+
+// the array replaces the default blobs; a key it leaves out keeps the blob
+// default
+static bool array(struct walk *w, size_t end, toml_datum_t datum) {
+	if (datum.type != TOML_ARRAY) {
+		return fail(w, "%s: expected an array of tables", w->path);
 	}
-	return config_key_set(w->config, key, datum.u.str.ptr,
-		(size_t)datum.u.str.len, w->error, w->error_size);
+	if (datum.u.arr.size > CONFIG_BLOBS_MAX) {
+		return fail(w, "%s: expected at most %d tables", w->path,
+			CONFIG_BLOBS_MAX);
+	}
+	config_blobs_reset(w->config, datum.u.arr.size);
+	for (int32_t i = 0; i < datum.u.arr.size; i++) {
+		// the last blob's walk left its key on the path
+		w->path[end] = '\0';
+		if (datum.u.arr.elem[i].type != TOML_TABLE) {
+			return fail(
+				w, "%s: expected an array of tables", w->path);
+		}
+		w->index = (size_t)i;
+		bool ok = table(w, end, datum.u.arr.elem[i]);
+		w->index = 0;
+		if (!ok) {
+			return false;
+		}
+	}
+	return true;
 }
 
 // recursion only enters tables that hold schema keys, so the schema bounds
@@ -77,7 +118,11 @@ static bool table(struct walk *w, size_t prefix, toml_datum_t datum) {
 
 		toml_datum_t child = datum.u.tab.value[i];
 		const struct config_key *found = config_key_find(w->path, end);
-		if (found) {
+		if (config_key_is_array(w->path, end)) {
+			if (!array(w, end, child)) {
+				return false;
+			}
+		} else if (found) {
 			if (!value(w, found, child)) {
 				return false;
 			}

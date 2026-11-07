@@ -57,7 +57,7 @@ static bool buffer_layout(int32_t width, int32_t height, int32_t *stride) {
 
 // the fd stays open for the pool, -1 on failure
 static int map(struct buffer *buffer) {
-	int fd = memfd_create("sweetlock-ui", MFD_CLOEXEC);
+	int fd = memfd_create("sweetlock-buffer", MFD_CLOEXEC);
 	if (fd < 0 || ftruncate(fd, (off_t)buffer->size) != 0) {
 		log_error("failed to create buffer memory: %m");
 	} else {
@@ -74,13 +74,15 @@ static int map(struct buffer *buffer) {
 	return -1;
 }
 
-static bool create_wl(
-	struct buffer *buffer, struct wl_shm *shm, int fd, int32_t stride) {
+static bool create_wl(struct buffer *buffer, struct wl_shm *shm, int fd,
+	int32_t stride, bool opaque) {
 	struct wl_shm_pool *pool =
 		wl_shm_create_pool(shm, fd, (int32_t)buffer->size);
 	if (pool) {
 		buffer->wl = wl_shm_pool_create_buffer(pool, 0, buffer->width,
-			buffer->height, stride, WL_SHM_FORMAT_ARGB8888);
+			buffer->height, stride,
+			opaque ? WL_SHM_FORMAT_XRGB8888
+			       : WL_SHM_FORMAT_ARGB8888);
 		wl_shm_pool_destroy(pool);
 	}
 	if (!buffer->wl) {
@@ -92,7 +94,7 @@ static bool create_wl(
 }
 
 struct buffer *buffer_create(
-	struct wl_shm *shm, int32_t width, int32_t height) {
+	struct wl_shm *shm, int32_t width, int32_t height, bool opaque) {
 	int32_t stride = 0;
 	if (!buffer_layout(width, height, &stride)) {
 		log_error("buffer size %dx%d is out of range", width, height);
@@ -111,7 +113,7 @@ struct buffer *buffer_create(
 	};
 
 	int fd = map(buffer);
-	bool ok = fd >= 0 && create_wl(buffer, shm, fd, stride);
+	bool ok = fd >= 0 && create_wl(buffer, shm, fd, stride, opaque);
 	if (fd >= 0) {
 		close(fd);
 	}
@@ -119,11 +121,13 @@ struct buffer *buffer_create(
 		buffer_destroy(buffer);
 		return NULL;
 	}
+	// the same memory layouts as the two wl_shm formats
+	cairo_format_t format =
+		opaque ? CAIRO_FORMAT_RGB24 : CAIRO_FORMAT_ARGB32;
 	buffer->cairo = cairo_image_surface_create_for_data(
-		buffer->data, CAIRO_FORMAT_ARGB32, width, height, stride);
+		buffer->data, format, width, height, stride);
 	if (cairo_surface_status(buffer->cairo) != CAIRO_STATUS_SUCCESS ||
-		cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, width) !=
-			stride) {
+		cairo_format_stride_for_width(format, width) != stride) {
 		log_error("failed to create a Cairo surface for the buffer");
 		buffer_destroy(buffer);
 		return NULL;

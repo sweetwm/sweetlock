@@ -47,7 +47,8 @@ static bool replace_buffers(
 	struct panel *panel, int32_t width, int32_t height) {
 	struct buffer *fresh[PANEL_BUFFERS] = {0};
 	for (int i = 0; i < PANEL_BUFFERS; i++) {
-		fresh[i] = buffer_create(panel->display->shm, width, height);
+		fresh[i] = buffer_create(
+			panel->display->shm, width, height, false);
 		if (!fresh[i]) {
 			for (int j = 0; j < i; j++) {
 				buffer_destroy(fresh[j]);

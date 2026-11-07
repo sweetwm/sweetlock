@@ -53,10 +53,15 @@ bool worker_start(struct worker *worker) {
 	return true;
 }
 
+// a walk to the tail, since the queue holds a few jobs at most
 void worker_submit(struct worker *worker, struct worker_job *job) {
+	job->next = NULL;
 	pthread_mutex_lock(&worker->lock);
-	job->next = worker->queue;
-	worker->queue = job;
+	struct worker_job **tail = &worker->queue;
+	while (*tail) {
+		tail = &(*tail)->next;
+	}
+	*tail = job;
 	pthread_cond_signal(&worker->wake);
 	pthread_mutex_unlock(&worker->lock);
 }
