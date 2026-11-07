@@ -2,11 +2,56 @@
 # Copy it to ~/.config/sweetlock/config.toml and change what you like.
 # Any scalar key can also be set from the command line:
 #   sweetlock --set background.color=#000000
+#   sweetlock --set background.mode=radial
 
 [background]
-# Solid colour, and the first frame shown, as "#rrggbb"; the lock is
-# opaque, so the alpha of "#rrggbbaa" is ignored
+# "solid", "gradient", "radial" or "layered". Anything but solid is drawn
+# once per output size and cached in ~/.cache/sweetlock (up to 6 entries,
+# each 4 bytes a pixel), so later locks read it back in one go
+mode = "solid"
+# The solid colour, and the first frame shown in every mode, as "#rrggbb".
+# Backgrounds are opaque, so the alpha of "#rrggbbaa" is ignored here and in
+# the gradient and radial colours
 color = "#1f1b2e"
+
+# Four corners, blended smoothly between them
+[background.gradient]
+top_left = "#2b2342"
+top_right = "#1f1b2e"
+bottom_left = "#1f1b2e"
+bottom_right = "#2b2342"
+
+# Positions and sizes are percent of the output, so on a wide screen the
+# circle is an ellipse
+[background.radial]
+center = "#373057"
+edge = "#1f1b2e"
+center_x = 50
+center_y = 50
+# Percent of the distance from the centre to the farthest corner, 1 to 200
+radius = 80
+
+[background.layered]
+# "solid" (background.color), "gradient" or "radial", from the tables above
+base = "radial"
+
+# Soft round blobs drawn over the base, at most three. A blob fades from its
+# colour to nothing; the alpha of "#rrggbbaa" is its strength. x, y and size
+# (the radius, 1 to 100) are percent of the output. A [[blob]] list in your
+# config replaces these two, and a key it leaves out defaults to
+# color = "#ffffff2e", x = 50, y = 50, size = 36. Blobs can only be set here,
+# not with --set
+[[background.layered.blob]]
+color = "#6a5a9e59"
+x = 30
+y = 35
+size = 45
+
+[[background.layered.blob]]
+color = "#3e6a9a40"
+x = 72
+y = 70
+size = 38
 
 [clock]
 enabled = true

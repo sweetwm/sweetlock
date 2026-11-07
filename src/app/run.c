@@ -17,6 +17,7 @@
 #include "ui/clock.h"
 #include "ui/field.h"
 #include "ui/ui.h"
+#include "wayland/backdrop.h"
 #include "wayland/display.h"
 #include "worker.h"
 
@@ -135,6 +136,22 @@ static void handle_field(struct app *app) {
 	}
 }
 
+// a ready background is attached by the next render pass
+static void collect(struct app *app) {
+	struct worker_job *job = worker_collect(&app->worker);
+	while (job) {
+		// a background job may go straight back to the worker
+		struct worker_job *next = job->next;
+		if (job == &app->content.avatar.job) {
+			avatar_finish(&app->content.avatar);
+			display_mark_dirty(&app->display, UI_LOGIN);
+		} else {
+			backdrop_collect(&app->display, &app->worker, job);
+		}
+		job = next;
+	}
+}
+
 // false when the loop must exit without unlocking
 static bool handle_fds(struct app *app, const struct pollfd *fds) {
 	if ((fds[FD_SIGNAL].revents & POLLIN) &&
@@ -153,10 +170,8 @@ static bool handle_fds(struct app *app, const struct pollfd *fds) {
 	if (fds[FD_FIELD].revents & POLLIN) {
 		handle_field(app);
 	}
-	// the avatar is the worker's only job so far
-	if ((fds[FD_WORKER].revents & POLLIN) && worker_collect(&app->worker)) {
-		avatar_finish(&app->content.avatar);
-		display_mark_dirty(&app->display, UI_LOGIN);
+	if (fds[FD_WORKER].revents & POLLIN) {
+		collect(app);
 	}
 	return true;
 }
@@ -191,7 +206,7 @@ static void report_locked(struct app *app) {
 }
 
 // the worker, then Pango and fontconfig, only after locked so neither
-// delays it
+// delays it, backgrounds go to the worker before the avatar
 static void start_ui(struct app *app) {
 	worker_start(&app->worker);
 	app->content = (struct ui_content){
@@ -199,8 +214,10 @@ static void start_ui(struct app *app) {
 		.input = &app->input,
 		.auth = &app->auth,
 		.field = &app->field,
+		.worker = &app->worker,
 	};
-	ui_content_start(&app->content, &app->clock, &app->worker);
+	display_show_backgrounds(&app->display, &app->content);
+	ui_content_start(&app->content, &app->clock);
 	app->stage = STAGE_STARTED;
 }
 
@@ -337,8 +354,9 @@ int app_run(const struct config *config, const struct timespec *start,
 		display_lock(&app.display, start)) {
 		status = run(&app);
 	}
-	display_disconnect(&app.display);
+	// the worker first: it may be drawing into a backdrop's buffer
 	worker_stop(&app.worker);
+	display_disconnect(&app.display);
 	ui_content_finish(&app.content);
 	clock_stop(&app.clock);
 	field_finish(&app.field);

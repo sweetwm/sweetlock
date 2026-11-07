@@ -2,6 +2,7 @@
 
 #include "app.h"
 #include "auth/auth.h"
+#include "background/draw.h"
 #include "input/input.h"
 #include "input/password.h"
 #include "log.h"
@@ -32,10 +33,9 @@ static bool draw_part(struct ui *ui, enum ui_part part, cairo_t *cr,
 
 static bool draw(cairo_t *cr, const struct ui_content *content,
 	const struct preview *preview) {
-	struct color color = content->config->background.color;
-	cairo_set_source_rgb(
-		cr, color.red / 255.0, color.green / 255.0, color.blue / 255.0);
-	cairo_paint(cr);
+	if (!background_draw(content->config, cairo_get_target(cr))) {
+		return false;
+	}
 	struct ui *ui = ui_create(content, preview->scale);
 	if (!ui) {
 		return false;
@@ -81,8 +81,6 @@ static int write_png(
 	return EXIT_SUCCESS;
 }
 
-// the field's state comes from the flag, not from typing or PAM, and the
-// avatar loads here rather than on the worker
 int app_preview(const struct config *config, const struct preview *preview) {
 	static const char sample[] = "sweetlock";
 	enum preview_field state = preview->field;
@@ -109,7 +107,7 @@ int app_preview(const struct config *config, const struct preview *preview) {
 		.auth = &auth,
 		.field = &field,
 	};
-	ui_content_start(&content, &clock, NULL);
+	ui_content_start(&content, &clock);
 	int status = write_png(&content, preview);
 	ui_content_finish(&content);
 	clock_stop(&clock);

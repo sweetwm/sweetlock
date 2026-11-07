@@ -19,15 +19,15 @@ struct display {
 	struct wl_subcompositor *subcompositor;
 	struct wl_shm *shm;
 	struct wp_viewporter *viewporter;
-	// optional; wl_output.scale is the fallback
 	struct wp_fractional_scale_manager_v1 *fractional_scale;
-	// optional; without it the pointer keeps the compositor's cursor
 	struct wp_cursor_shape_manager_v1 *cursor_shape;
 	struct ext_session_lock_manager_v1 *lock_manager;
 	struct wl_buffer *solid;
 	struct lock lock;
 	struct wl_list outputs;
 	struct wl_list seats;
+	// generated backgrounds, one per physical size in use
+	struct wl_list backdrops;
 	// every seat's keyboard types into it
 	struct input *input;
 	bool failed;
@@ -38,6 +38,10 @@ bool display_connect(struct display *display, const struct config *config,
 
 // requests the lock and a lock surface for every output
 bool display_lock(struct display *display, const struct timespec *start);
+
+// starts and shows every mapped output's generated background
+void display_show_backgrounds(
+	struct display *display, const struct ui_content *content);
 
 // draws every mapped output's UI that changed; true when any committed
 bool display_render(struct display *display, const struct ui_content *content);
@@ -51,7 +55,6 @@ bool display_hits_eye(const struct display *display,
 // logs why the connection ended, including any protocol error
 void display_log_lost(struct display *display);
 
-// never unlocks: a lock still held is dropped without a request
 void display_disconnect(struct display *display);
 
 #endif

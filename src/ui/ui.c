@@ -69,8 +69,7 @@ static const struct {
 
 enum { UI_OUTPUT_MAX = 1 << 16 };
 
-void ui_content_start(struct ui_content *content, struct clock *clock,
-	struct worker *worker) {
+void ui_content_start(struct ui_content *content, struct clock *clock) {
 	const struct config *config = content->config;
 	content->clock = clock;
 	const char *time = config->clock.enabled ? config->clock.format : NULL;
@@ -81,7 +80,7 @@ void ui_content_start(struct ui_content *content, struct clock *clock,
 	user_lookup(&content->user, config->username.text);
 	if (config->avatar.enabled) {
 		avatar_load(&content->avatar, config->avatar.path,
-			content->user.login, worker);
+			content->user.login, content->worker);
 	}
 }
 

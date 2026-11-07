@@ -10,6 +10,7 @@
 #include "fractional-scale-v1-client-protocol.h"
 #include "log.h"
 #include "viewporter-client-protocol.h"
+#include "wayland/backdrop.h"
 #include "wayland/buffer.h"
 #include "wayland/output.h"
 #include "wayland/seat.h"
@@ -162,6 +163,7 @@ bool display_connect(struct display *display, const struct config *config,
 	*display = (struct display){.input = input};
 	wl_list_init(&display->outputs);
 	wl_list_init(&display->seats);
+	wl_list_init(&display->backdrops);
 	display->wl = wl_display_connect(NULL);
 	if (!display->wl) {
 		log_error("failed to connect to Wayland: %m");
@@ -211,6 +213,14 @@ bool display_lock(struct display *display, const struct timespec *start) {
 		}
 	}
 	return true;
+}
+
+void display_show_backgrounds(
+	struct display *display, const struct ui_content *content) {
+	struct output *output = NULL;
+	wl_list_for_each(output, &display->outputs, link) {
+		output_show_background(output, content);
+	}
 }
 
 bool display_render(struct display *display, const struct ui_content *content) {
@@ -271,6 +281,12 @@ void display_disconnect(struct display *display) {
 	wl_list_for_each_safe(output, next, &display->outputs, link) {
 		wl_list_remove(&output->link);
 		output_destroy(output);
+	}
+	struct backdrop *backdrop = NULL;
+	struct backdrop *next_backdrop = NULL;
+	wl_list_for_each_safe(
+		backdrop, next_backdrop, &display->backdrops, link) {
+		backdrop_destroy(backdrop);
 	}
 	if (display->solid) {
 		wl_buffer_destroy(display->solid);

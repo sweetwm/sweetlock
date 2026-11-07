@@ -19,11 +19,11 @@ export LSAN_OPTIONS="${LSAN_OPTIONS:-suppressions=$PWD/scripts/lsan.supp:print_s
 
 ./build-asan/sweetlock --version >/dev/null
 
-# the whole UI draw path, without a compositor
+# the whole UI and background draw path, without a compositor
 preview=$(mktemp -d /tmp/sweetlock-preview-XXXXXX)
 trap 'rm -rf "$preview"' EXIT
 ./build-asan/sweetlock --no-config --preview "$preview/scene.png" \
-	--size 1280x720 --scale 1.5
+	--size 1280x720 --scale 1.5 --set background.mode=layered
 # the first preview is a PNG to decode as the avatar
 ./build-asan/sweetlock --no-config --preview "$preview/avatar.png" \
 	--set avatar.path="$preview/scene.png" --preview-state failed

@@ -12,6 +12,16 @@ enum {
 	CONFIG_STRING_SIZE = 128,
 	// every path key, its NUL included: PATH_MAX
 	CONFIG_PATH_SIZE = 4096,
+	// background.layered.blob, an array of tables
+	CONFIG_BLOBS_MAX = 3,
+};
+
+// background.layered.base takes the first three
+enum background_mode {
+	BACKGROUND_SOLID,
+	BACKGROUND_GRADIENT,
+	BACKGROUND_RADIAL,
+	BACKGROUND_LAYERED,
 };
 
 struct color {
@@ -21,9 +31,41 @@ struct color {
 	uint8_t alpha;
 };
 
+struct config_gradient {
+	struct color top_left;
+	struct color top_right;
+	struct color bottom_left;
+	struct color bottom_right;
+};
+
+// positions and sizes are percent of the output, so circles follow its shape
+struct config_radial {
+	struct color center;
+	struct color edge;
+	int32_t center_x;
+	int32_t center_y;
+	int32_t radius;
+};
+
+// fades from its colour, alpha included, to nothing
+struct config_blob {
+	struct color color;
+	int32_t x;
+	int32_t y;
+	int32_t size;
+};
+
 struct config {
 	struct {
+		enum background_mode mode;
 		struct color color;
+		struct config_gradient gradient;
+		struct config_radial radial;
+		struct {
+			enum background_mode base;
+			int32_t blob_count;
+			struct config_blob blob[CONFIG_BLOBS_MAX];
+		} layered;
 	} background;
 	struct {
 		bool enabled;
