@@ -6,6 +6,7 @@
 
 struct display;
 struct keyboard;
+struct pointer;
 struct wl_seat;
 
 struct seat {
@@ -15,6 +16,7 @@ struct seat {
 	// the registry name, matched against global_remove
 	uint32_t global;
 	struct keyboard *keyboard;
+	struct pointer *pointer;
 };
 
 // takes ownership of wl, released on failure

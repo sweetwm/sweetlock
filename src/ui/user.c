@@ -17,18 +17,18 @@ static bool take(char name[USER_NAME_SIZE], const char *text, size_t length) {
 	return true;
 }
 
-void user_name(char name[USER_NAME_SIZE], const char *configured) {
-	name[0] = '\0';
-	if (take(name, configured, strlen(configured))) {
-		return;
-	}
+void user_lookup(struct user *user, const char *configured) {
+	*user = (struct user){0};
 	const struct passwd *account = getpwuid(getuid());
-	if (!account) {
+	if (account) {
+		take(user->login, account->pw_name, strlen(account->pw_name));
+	}
+	if (take(user->name, configured, strlen(configured)) || !account) {
 		return;
 	}
 	// the GECOS fields after the full name are office and phone numbers
 	const char *gecos = account->pw_gecos ? account->pw_gecos : "";
-	if (!take(name, gecos, strcspn(gecos, ","))) {
-		take(name, account->pw_name, strlen(account->pw_name));
+	if (!take(user->name, gecos, strcspn(gecos, ","))) {
+		memcpy(user->name, user->login, sizeof user->name);
 	}
 }

@@ -7,12 +7,29 @@
 #include "input/keyboard.h"
 #include "log.h"
 #include "wayland/display.h"
+#include "wayland/pointer.h"
+
+// the pointer only reveals the password, so losing it costs nothing else
+static void update_pointer(struct seat *seat, bool pointer) {
+	if (pointer && !seat->pointer) {
+		struct wl_pointer *proxy = wl_seat_get_pointer(seat->wl);
+		seat->pointer =
+			proxy ? pointer_create(seat->display, proxy) : NULL;
+		if (!seat->pointer) {
+			log_warn("failed to get a seat's pointer");
+		}
+	} else if (!pointer && seat->pointer) {
+		pointer_destroy(seat->pointer);
+		seat->pointer = NULL;
+	}
+}
 
 // without its keyboard the session cannot be unlocked, so a failure here
 // ends the locker and leaves the restart to the compositor
 static void seat_capabilities(
 	void *data, struct wl_seat *wl, uint32_t capabilities) {
 	struct seat *seat = data;
+	update_pointer(seat, capabilities & WL_SEAT_CAPABILITY_POINTER);
 	bool keyboard = capabilities & WL_SEAT_CAPABILITY_KEYBOARD;
 	if (keyboard && !seat->keyboard) {
 		struct wl_keyboard *proxy = wl_seat_get_keyboard(wl);
@@ -70,6 +87,7 @@ void seat_destroy(struct seat *seat) {
 		return;
 	}
 	keyboard_destroy(seat->keyboard);
+	pointer_destroy(seat->pointer);
 	release(seat->wl);
 	free(seat);
 }

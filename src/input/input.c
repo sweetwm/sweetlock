@@ -87,26 +87,30 @@ static enum key_action handle(struct input *input, struct keyboard *keyboard,
 	enum key_action action =
 		keyboard_translate(keyboard, key, text, sizeof text);
 	struct password *password = input->password;
+	bool changed = false;
 	switch (action) {
 	case KEY_TEXT:
 		// input past the limit is dropped
-		password_append(password, text, strlen(text));
+		changed = password_append(password, text, strlen(text));
 		break;
 	case KEY_BACKSPACE:
-		password_backspace(password);
+		changed = password_backspace(password);
 		break;
 	case KEY_CLEAR:
+		changed = password->length > 0;
 		password_clear(password);
 		break;
 	case KEY_SUBMIT:
 		if (!repeat) {
 			submit(input);
+			changed = true;
 		}
 		break;
 	case KEY_NONE:
 		break;
 	}
 	explicit_bzero(text, sizeof text);
+	input->changed |= changed;
 	return action;
 }
 
@@ -150,4 +154,9 @@ void input_repeat(struct input *input) {
 		    input, input->repeat_keyboard, input->repeat_key, true))) {
 		stop_repeat(input);
 	}
+}
+
+void input_toggle_reveal(struct input *input) {
+	input->revealed = !input->revealed;
+	input->changed = true;
 }

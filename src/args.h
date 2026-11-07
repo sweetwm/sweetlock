@@ -20,8 +20,18 @@ enum args_action {
 	ARGS_VERSION,
 };
 
+// what the password field shows in a preview
+enum preview_field {
+	PREVIEW_IDLE,
+	PREVIEW_TYPING,
+	PREVIEW_REVEALED,
+	PREVIEW_CHECKING,
+	PREVIEW_FAILED,
+};
+
 struct preview {
 	const char *path;
+	enum preview_field field;
 	// the output's size in pixels, and its scale in 120ths
 	int32_t width;
 	int32_t height;

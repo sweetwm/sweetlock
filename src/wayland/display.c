@@ -5,6 +5,7 @@
 #include <string.h>
 #include <wayland-client.h>
 
+#include "cursor-shape-v1-client-protocol.h"
 #include "ext-session-lock-v1-client-protocol.h"
 #include "fractional-scale-v1-client-protocol.h"
 #include "log.h"
@@ -22,6 +23,7 @@ enum {
 	SEAT_VERSION = 7,
 	VIEWPORTER_VERSION = 1,
 	FRACTIONAL_SCALE_VERSION = 1,
+	CURSOR_SHAPE_VERSION = 1,
 	LOCK_MANAGER_VERSION = 1,
 };
 
@@ -91,6 +93,11 @@ static void registry_global(void *data, struct wl_registry *registry,
 		display->fractional_scale = bind(registry, name,
 			&wp_fractional_scale_manager_v1_interface, version,
 			FRACTIONAL_SCALE_VERSION);
+	} else if (!display->cursor_shape &&
+		   is(interface, &wp_cursor_shape_manager_v1_interface)) {
+		display->cursor_shape = bind(registry, name,
+			&wp_cursor_shape_manager_v1_interface, version,
+			CURSOR_SHAPE_VERSION);
 	} else if (!display->lock_manager &&
 		   is(interface, &ext_session_lock_manager_v1_interface)) {
 		display->lock_manager = bind(registry, name,
@@ -184,6 +191,11 @@ bool display_connect(struct display *display, const struct config *config,
 			 "wl_output.scale",
 			wp_fractional_scale_manager_v1_interface.name);
 	}
+	if (!display->cursor_shape) {
+		log_info("the compositor does not offer %s; the pointer keeps "
+			 "its cursor",
+			wp_cursor_shape_manager_v1_interface.name);
+	}
 	display->solid = buffer_solid(display->shm, config->background.color);
 	return display->solid && !display->failed;
 }
@@ -215,6 +227,17 @@ void display_mark_dirty(struct display *display, enum ui_part part) {
 	wl_list_for_each(output, &display->outputs, link) {
 		output_mark_dirty(output, part);
 	}
+}
+
+bool display_hits_eye(const struct display *display,
+	const struct wl_surface *surface, double x, double y) {
+	const struct output *output = NULL;
+	wl_list_for_each(output, &display->outputs, link) {
+		if (output_hits_eye(output, surface, x, y)) {
+			return true;
+		}
+	}
+	return false;
 }
 
 void display_log_lost(struct display *display) {
@@ -254,6 +277,9 @@ void display_disconnect(struct display *display) {
 	}
 	if (display->lock_manager) {
 		ext_session_lock_manager_v1_destroy(display->lock_manager);
+	}
+	if (display->cursor_shape) {
+		wp_cursor_shape_manager_v1_destroy(display->cursor_shape);
 	}
 	if (display->fractional_scale) {
 		wp_fractional_scale_manager_v1_destroy(

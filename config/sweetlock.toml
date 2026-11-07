@@ -18,16 +18,34 @@ enabled = true
 # strftime(3) format; day and month names follow LC_TIME
 format = "%A, %B %-d"
 
+[avatar]
+enabled = true
+# A PNG, as an absolute path or one starting with ~/. Empty: the
+# AccountsService icon (/var/lib/AccountsService/icons/LOGIN), then ~/.face,
+# then a drawn outline. Pictures that are not square show their centre.
+path = ""
+
 [username]
 enabled = true
 # Empty: the full name from the account (GECOS), then the login name
 text = ""
 
+[input]
+# Shown in the empty password field
+placeholder = "Password"
+# The eye in the field that shows the typed text; clicking it is the only
+# use of the pointer
+reveal_toggle = true
+
 [theme]
 # A fontconfig family, or a comma-separated list of them
 font = "sans-serif"
 # Colours as "#rrggbb" or "#rrggbbaa"
-# The username
+# The username, the avatar outline and the field's text
 foreground = "#e8e6f0"
-# The clock and the date
+# The clock, the date, the eye and "Checking..."
 muted = "#a9a4bd"
+# The password field and the avatar's circle; use the alpha to tint
+field = "#ffffff1a"
+# A wrong password
+error = "#e06c75"

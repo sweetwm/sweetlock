@@ -33,13 +33,24 @@ struct config {
 	} date;
 	struct {
 		bool enabled;
+		// empty: the AccountsService icon, then ~/.face
+		char path[CONFIG_STRING_SIZE];
+	} avatar;
+	struct {
+		bool enabled;
 		// empty: the GECOS full name, then the login name
 		char text[CONFIG_STRING_SIZE];
 	} username;
 	struct {
+		char placeholder[CONFIG_STRING_SIZE];
+		bool reveal_toggle;
+	} input;
+	struct {
 		char font[CONFIG_STRING_SIZE];
 		struct color foreground;
 		struct color muted;
+		struct color field;
+		struct color error;
 	} theme;
 };
 

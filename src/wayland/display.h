@@ -10,6 +10,7 @@
 #include "wayland/lock.h"
 
 struct input;
+struct wl_surface;
 
 struct display {
 	struct wl_display *wl;
@@ -20,6 +21,8 @@ struct display {
 	struct wp_viewporter *viewporter;
 	// optional; wl_output.scale is the fallback
 	struct wp_fractional_scale_manager_v1 *fractional_scale;
+	// optional; without it the pointer keeps the compositor's cursor
+	struct wp_cursor_shape_manager_v1 *cursor_shape;
 	struct ext_session_lock_manager_v1 *lock_manager;
 	struct wl_buffer *solid;
 	struct lock lock;
@@ -40,6 +43,10 @@ bool display_lock(struct display *display, const struct timespec *start);
 bool display_render(struct display *display, const struct ui_content *content);
 
 void display_mark_dirty(struct display *display, enum ui_part part);
+
+// whether a point on a surface is on some output's reveal toggle
+bool display_hits_eye(const struct display *display,
+	const struct wl_surface *surface, double x, double y);
 
 // logs why the connection ended, including any protocol error
 void display_log_lost(struct display *display);

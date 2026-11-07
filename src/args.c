@@ -20,12 +20,17 @@ const char args_usage[] =
 	"  --color HEX       Same as --set background.color=HEX\n"
 	"  --no-clock        Same as --set clock.enabled=false\n"
 	"  --no-date         Same as --set date.enabled=false\n"
+	"  --no-avatar       Same as --set avatar.enabled=false\n"
 	"  --no-username     Same as --set username.enabled=false\n"
 	"  -f, --daemonize   Return once the screen is locked\n"
 	"  --preview FILE    Draw the lock screen to a PNG instead of locking\n"
 	"  --size WxH        Output size in pixels for --preview "
 	"(default 1920x1080)\n"
 	"  --scale S         Output scale for --preview (default 1)\n"
+	"  --preview-state STATE\n"
+	"                    Password field for --preview: idle, typing, "
+	"revealed,\n"
+	"                    checking or failed (default idle)\n"
 	"  -h, --help        Print help\n"
 	"  -V, --version     Print version\n";
 
@@ -40,6 +45,7 @@ static const struct alias aliases[] = {
 	{"--color", "background.color", NULL},
 	{"--no-clock", "clock.enabled", "false"},
 	{"--no-date", "date.enabled", "false"},
+	{"--no-avatar", "avatar.enabled", "false"},
 	{"--no-username", "username.enabled", "false"},
 };
 
@@ -127,6 +133,25 @@ static void parse_scale(struct args *args, const char *flag, const char *text) {
 	args->preview.scale = (uint32_t)(scaled + 0.5);
 }
 
+static void parse_state(struct args *args, const char *flag, const char *text) {
+	static const char *const names[] = {
+		[PREVIEW_IDLE] = "idle",
+		[PREVIEW_TYPING] = "typing",
+		[PREVIEW_REVEALED] = "revealed",
+		[PREVIEW_CHECKING] = "checking",
+		[PREVIEW_FAILED] = "failed",
+	};
+	for (size_t i = 0; i < sizeof names / sizeof names[0]; i++) {
+		if (strcmp(text, names[i]) == 0) {
+			args->preview.field = (enum preview_field)i;
+			return;
+		}
+	}
+	log_error("%s: expected idle, typing, revealed, checking or failed; "
+		  "ignoring it",
+		flag);
+}
+
 // flag is one that takes_value accepts
 static void parse_valued(
 	struct args *args, const char *flag, const char *value) {
@@ -140,6 +165,8 @@ static void parse_valued(
 		parse_size(args, flag, value);
 	} else if (strcmp(flag, "--scale") == 0) {
 		parse_scale(args, flag, value);
+	} else if (strcmp(flag, "--preview-state") == 0) {
+		parse_state(args, flag, value);
 	} else {
 		const char *key = find_alias(flag)->key;
 		add(args, flag, key, strlen(key), value);
@@ -147,8 +174,8 @@ static void parse_valued(
 }
 
 static bool takes_value(const char *flag) {
-	static const char *const flags[] = {
-		"--config", "--set", "--preview", "--size", "--scale"};
+	static const char *const flags[] = {"--config", "--set", "--preview",
+		"--size", "--scale", "--preview-state"};
 	for (size_t i = 0; i < sizeof flags / sizeof flags[0]; i++) {
 		if (strcmp(flag, flags[i]) == 0) {
 			return true;
