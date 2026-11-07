@@ -11,12 +11,16 @@ static const struct config defaults = {
 	.background = {.color = {0x1f, 0x1b, 0x2e, 0xff}},
 	.clock = {.enabled = true, .format = "%H:%M"},
 	.date = {.enabled = true, .format = "%A, %B %-d"},
+	.avatar = {.enabled = true, .path = ""},
 	.username = {.enabled = true, .text = ""},
+	.input = {.placeholder = "Password", .reveal_toggle = true},
 	.theme =
 		{
 			.font = "sans-serif",
 			.foreground = {0xe8, 0xe6, 0xf0, 0xff},
 			.muted = {0xa9, 0xa4, 0xbd, 0xff},
+			.field = {0xff, 0xff, 0xff, 0x1a},
+			.error = {0xe0, 0x6c, 0x75, 0xff},
 		},
 };
 
@@ -28,11 +32,17 @@ static const struct config_key keys[] = {
 	KEY("clock.format", CONFIG_STRING, clock.format),
 	KEY("date.enabled", CONFIG_BOOL, date.enabled),
 	KEY("date.format", CONFIG_STRING, date.format),
+	KEY("avatar.enabled", CONFIG_BOOL, avatar.enabled),
+	KEY("avatar.path", CONFIG_STRING, avatar.path),
 	KEY("username.enabled", CONFIG_BOOL, username.enabled),
 	KEY("username.text", CONFIG_STRING, username.text),
+	KEY("input.placeholder", CONFIG_STRING, input.placeholder),
+	KEY("input.reveal_toggle", CONFIG_BOOL, input.reveal_toggle),
 	KEY("theme.font", CONFIG_STRING, theme.font),
 	KEY("theme.foreground", CONFIG_COLOR, theme.foreground),
 	KEY("theme.muted", CONFIG_COLOR, theme.muted),
+	KEY("theme.field", CONFIG_COLOR, theme.field),
+	KEY("theme.error", CONFIG_COLOR, theme.error),
 };
 
 #undef KEY

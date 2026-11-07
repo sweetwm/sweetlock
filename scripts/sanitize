@@ -24,6 +24,9 @@ preview=$(mktemp -d /tmp/sweetlock-preview-XXXXXX)
 trap 'rm -rf "$preview"' EXIT
 ./build-asan/sweetlock --no-config --preview "$preview/scene.png" \
 	--size 1280x720 --scale 1.5
+# the first preview is a PNG to decode as the avatar
+./build-asan/sweetlock --no-config --preview "$preview/avatar.png" \
+	--set avatar.path="$preview/scene.png" --preview-state failed
 
 if [ -n "$(meson test -C build-asan --list 2>/dev/null)" ]; then
 	meson test -C build-asan --print-errorlogs

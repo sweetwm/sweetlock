@@ -111,12 +111,12 @@ static struct buffer *free_buffer(struct panel *panel) {
 }
 
 static bool draw(
-	const struct panel *panel, struct buffer *buffer, const struct ui *ui) {
+	const struct panel *panel, struct buffer *buffer, struct ui *ui) {
 	cairo_t *cr = cairo_create(buffer->cairo);
 	cairo_set_operator(cr, CAIRO_OPERATOR_CLEAR);
 	cairo_paint(cr);
 	cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
-	bool ok = ui_draw(ui, panel->part, cr, buffer->width);
+	bool ok = ui_draw(ui, panel->part, cr, &panel->rect);
 	cairo_destroy(cr);
 	cairo_surface_flush(buffer->cairo);
 	return ok;
@@ -137,7 +137,7 @@ static void attach(struct panel *panel, struct buffer *buffer) {
 	buffer->busy = true;
 }
 
-enum panel_result panel_render(struct panel *panel, const struct ui *ui) {
+enum panel_result panel_render(struct panel *panel, struct ui *ui) {
 	if (!panel->dirty || panel->frame) {
 		return PANEL_IDLE;
 	}

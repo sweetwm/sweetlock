@@ -43,16 +43,22 @@ void text_set(PangoLayout *layout, const char *text) {
 	}
 }
 
-void text_draw_centred(
-	cairo_t *cr, PangoLayout *layout, double width, double centre_y) {
+void text_draw(cairo_t *cr, PangoLayout *layout, double x, double centre_y) {
 	PangoRectangle logical;
 	pango_layout_get_extents(layout, NULL, &logical);
 	double scale = PANGO_SCALE;
 	double baseline = pango_layout_get_baseline(layout) / scale;
 	double top = centre_y - logical.height / scale / 2 - logical.y / scale;
-	double x =
-		round((width - logical.width / scale) / 2 - logical.x / scale);
 	// the origin may stay fractional so the baseline lands exactly
-	cairo_move_to(cr, x, round(top + baseline) - baseline);
+	cairo_move_to(cr, round(x - logical.x / scale),
+		round(top + baseline) - baseline);
 	pango_cairo_show_layout(cr, layout);
+}
+
+void text_draw_centred(
+	cairo_t *cr, PangoLayout *layout, double width, double centre_y) {
+	PangoRectangle logical;
+	pango_layout_get_extents(layout, NULL, &logical);
+	text_draw(cr, layout, (width - logical.width / (double)PANGO_SCALE) / 2,
+		centre_y);
 }

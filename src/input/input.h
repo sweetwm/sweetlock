@@ -9,11 +9,16 @@ struct keyboard;
 struct password;
 struct xkb_context;
 
-// what every keyboard shares: the password, the attempt and key repeat
+// what every keyboard and pointer shares: the password, the attempt, key
+// repeat and the reveal toggle
 struct input {
 	struct auth *auth;
 	struct xkb_context *xkb;
 	struct password *password;
+	// the field shows the text instead of dots
+	bool revealed;
+	// something the field shows changed; the loop clears it
+	bool changed;
 	int repeat_fd;
 	// the held key that repeats, if any
 	struct keyboard *repeat_keyboard;
@@ -34,5 +39,7 @@ void input_forget(struct input *input, const struct keyboard *keyboard);
 
 // the repeat timer is readable
 void input_repeat(struct input *input);
+
+void input_toggle_reveal(struct input *input);
 
 #endif

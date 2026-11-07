@@ -10,6 +10,7 @@
 struct display;
 struct panel;
 struct wl_output;
+struct wl_surface;
 
 enum { OUTPUT_NAME_SIZE = 64 };
 
@@ -52,6 +53,9 @@ bool output_lock(struct output *output);
 bool output_render(struct output *output, const struct ui_content *content);
 
 void output_mark_dirty(struct output *output, enum ui_part part);
+
+bool output_hits_eye(const struct output *output,
+	const struct wl_surface *surface, double x, double y);
 
 void output_destroy(struct output *output);
 

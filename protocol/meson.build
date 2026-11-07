@@ -4,6 +4,9 @@ protocols = [
 	wl_protocol_dir / 'stable' / 'viewporter' / 'viewporter.xml',
 	wl_protocol_dir / 'staging' / 'ext-session-lock' / 'ext-session-lock-v1.xml',
 	wl_protocol_dir / 'staging' / 'fractional-scale' / 'fractional-scale-v1.xml',
+	wl_protocol_dir / 'staging' / 'cursor-shape' / 'cursor-shape-v1.xml',
+	# cursor-shape-v1 names zwp_tablet_tool_v2; every release ships this copy
+	wl_protocol_dir / 'unstable' / 'tablet' / 'tablet-unstable-v2.xml',
 ]
 
 protocol_src = []

@@ -325,6 +325,14 @@ void output_mark_dirty(struct output *output, enum ui_part part) {
 	}
 }
 
+// pointer coordinates on the login part are its logical pixels
+bool output_hits_eye(const struct output *output,
+	const struct wl_surface *surface, double x, double y) {
+	const struct panel *panel = output->panels[UI_LOGIN];
+	return panel && output->ui && panel->surface == surface &&
+	       ui_hits_eye(output->ui, &panel->rect, x, y);
+}
+
 // the UI goes first, then the role object before its wl_surface, and both
 // before the output
 void output_destroy(struct output *output) {

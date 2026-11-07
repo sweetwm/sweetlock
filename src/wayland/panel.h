@@ -42,7 +42,7 @@ bool panel_place(struct panel *panel, const struct ui_rect *rect,
 void panel_mark_dirty(struct panel *panel);
 
 // draws and commits when dirty, with no frame pending and a free buffer
-enum panel_result panel_render(struct panel *panel, const struct ui *ui);
+enum panel_result panel_render(struct panel *panel, struct ui *ui);
 
 // the frame callback, subsurface, viewport and surface go before the buffers
 void panel_destroy(struct panel *panel);

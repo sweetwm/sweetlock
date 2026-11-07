@@ -1,20 +1,10 @@
-#include <errno.h>
-#include <fcntl.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <sys/stat.h>
-#include <unistd.h>
 
 #include "config.h"
+#include "file.h"
 #include "log.h"
-
-enum read_result {
-	READ_OK,
-	READ_MISSING,
-	READ_FAILED,
-};
 
 static bool default_path(char *path, size_t size) {
 	int length = -1;
@@ -30,70 +20,21 @@ static bool default_path(char *path, size_t size) {
 	return length > 0 && (size_t)length < size;
 }
 
-static enum read_result fail_read(char *error, size_t size, const char *what) {
-	snprintf(error, size, "%s", what);
-	return READ_FAILED;
-}
-
-// O_NONBLOCK so a FIFO at the path cannot hang the lock; it is then refused
-static enum read_result read_file(const char *path, char *buffer,
-	size_t *length, char *error, size_t size) {
-	int fd = open(path, O_RDONLY | O_CLOEXEC | O_NONBLOCK | O_NOCTTY);
-	if (fd < 0) {
-		return errno == ENOENT
-			       ? READ_MISSING
-			       : fail_read(error, size, strerror(errno));
-	}
-	struct stat info;
-	if (fstat(fd, &info) != 0 || !S_ISREG(info.st_mode)) {
-		close(fd);
-		return fail_read(error, size, "not a regular file");
-	}
-	size_t total = 0;
-	for (;;) {
-		ssize_t n =
-			read(fd, buffer + total, CONFIG_MAX_BYTES + 1 - total);
-		if (n < 0 && errno == EINTR) {
-			continue;
-		}
-		if (n < 0) {
-			int saved = errno;
-			close(fd);
-			return fail_read(error, size, strerror(saved));
-		}
-		total += (size_t)n;
-		if (n == 0 || total > CONFIG_MAX_BYTES) {
-			break;
-		}
-	}
-	close(fd);
-	if (total > CONFIG_MAX_BYTES) {
-		snprintf(error, size, "larger than %d bytes", CONFIG_MAX_BYTES);
-		return READ_FAILED;
-	}
-	*length = total;
-	return READ_OK;
-}
-
 static void load_file(struct config *config, const char *path, bool explicit) {
-	char *buffer = malloc(CONFIG_MAX_BYTES + 1);
-	if (!buffer) {
-		log_error("out of memory reading the config; using defaults");
-		return;
-	}
+	char *buffer = NULL;
 	char error[CONFIG_ERROR_SIZE] = "";
 	size_t length = 0;
-	enum read_result result =
-		read_file(path, buffer, &length, error, sizeof error);
-	bool ok = result == READ_OK &&
+	enum file_result result = file_read(
+		path, CONFIG_MAX_BYTES, &buffer, &length, error, sizeof error);
+	bool ok = result == FILE_OK &&
 		  config_parse(buffer, length, config, error, sizeof error);
 	free(buffer);
 
 	if (ok) {
 		log_info("loaded config from %s", path);
-	} else if (result == READ_MISSING && !explicit) {
+	} else if (result == FILE_MISSING && !explicit) {
 		log_info("no config at %s; using defaults", path);
-	} else if (result == READ_MISSING) {
+	} else if (result == FILE_MISSING) {
 		log_error("%s: no such file; using defaults", path);
 	} else {
 		log_error("%s: %s; using defaults", path, error);

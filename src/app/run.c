@@ -12,10 +12,13 @@
 
 #include "auth/auth.h"
 #include "input/input.h"
+#include "input/password.h"
 #include "log.h"
 #include "ui/clock.h"
+#include "ui/field.h"
 #include "ui/ui.h"
 #include "wayland/display.h"
+#include "worker.h"
 
 enum {
 	FD_WAYLAND,
@@ -23,6 +26,8 @@ enum {
 	FD_AUTH,
 	FD_REPEAT,
 	FD_CLOCK,
+	FD_FIELD,
+	FD_WORKER,
 	FD_COUNT,
 };
 
@@ -38,6 +43,8 @@ struct app {
 	struct input input;
 	struct display display;
 	struct clock clock;
+	struct field field;
+	struct worker worker;
 	const struct config *config;
 	struct ui_content content;
 	enum ui_stage stage;
@@ -108,8 +115,24 @@ static bool handle_auth(struct app *app) {
 	enum auth_result result = auth_read(&app->auth);
 	if (result == AUTH_SUCCESS) {
 		lock_unlock(&app->display.lock);
+	} else if (result == AUTH_FAILURE) {
+		field_fail(&app->field);
+		display_mark_dirty(&app->display, UI_LOGIN);
 	}
 	return result != AUTH_LOST;
+}
+
+static enum field_state field_now(const struct app *app) {
+	return field_state(
+		&app->field, app->input.password->length, app->auth.busy);
+}
+
+static void handle_field(struct app *app) {
+	enum field_state before = field_now(app);
+	field_expire(&app->field);
+	if (field_now(app) != before) {
+		display_mark_dirty(&app->display, UI_LOGIN);
+	}
 }
 
 // false when the loop must exit without unlocking
@@ -126,6 +149,14 @@ static bool handle_fds(struct app *app, const struct pollfd *fds) {
 	}
 	if ((fds[FD_CLOCK].revents & POLLIN) && clock_update(&app->clock)) {
 		display_mark_dirty(&app->display, UI_CLOCK);
+	}
+	if (fds[FD_FIELD].revents & POLLIN) {
+		handle_field(app);
+	}
+	// the avatar is the worker's only job so far
+	if ((fds[FD_WORKER].revents & POLLIN) && worker_collect(&app->worker)) {
+		avatar_finish(&app->content.avatar);
+		display_mark_dirty(&app->display, UI_LOGIN);
 	}
 	return true;
 }
@@ -159,16 +190,32 @@ static void report_locked(struct app *app) {
 	}
 }
 
-// only after locked, so fontconfig's load never delays it, drawing from the
-// loop makes a burst of events cost one frame
+// the worker, then Pango and fontconfig, only after locked so neither
+// delays it
+static void start_ui(struct app *app) {
+	worker_start(&app->worker);
+	app->content = (struct ui_content){
+		.config = app->config,
+		.input = &app->input,
+		.auth = &app->auth,
+		.field = &app->field,
+	};
+	ui_content_start(&app->content, &app->clock, &app->worker);
+	app->stage = STAGE_STARTED;
+}
+
+// drawing from the loop makes a burst of events cost one frame
 static void render(struct app *app) {
 	struct display *display = &app->display;
 	if (display->lock.state != LOCK_LOCKED) {
 		return;
 	}
 	if (app->stage == STAGE_WAITING) {
-		ui_content_init(&app->content, app->config, &app->clock);
-		app->stage = STAGE_STARTED;
+		start_ui(app);
+	}
+	if (app->input.changed) {
+		app->input.changed = false;
+		display_mark_dirty(display, UI_LOGIN);
 	}
 	if (display_render(display, &app->content) &&
 		app->stage == STAGE_STARTED) {
@@ -190,6 +237,12 @@ static bool flush(struct wl_display *wl, short *events) {
 	return true;
 }
 
+// poll skips a negative fd, so these wait until the UI starts them
+static void late_fds(const struct app *app, struct pollfd *fds) {
+	fds[FD_CLOCK].fd = app->clock.fd;
+	fds[FD_WORKER].fd = app->worker.fd;
+}
+
 static int run(struct app *app) {
 	struct display *display = &app->display;
 	struct wl_display *wl = display->wl;
@@ -199,6 +252,8 @@ static int run(struct app *app) {
 		[FD_AUTH] = {.fd = app->auth.fd, .events = POLLIN},
 		[FD_REPEAT] = {.fd = app->input.repeat_fd, .events = POLLIN},
 		[FD_CLOCK] = {.events = POLLIN},
+		[FD_FIELD] = {.fd = app->field.timer_fd, .events = POLLIN},
+		[FD_WORKER] = {.events = POLLIN},
 	};
 
 	for (;;) {
@@ -214,8 +269,7 @@ static int run(struct app *app) {
 			return stop(display);
 		}
 		render(app);
-		// poll skips it while negative, until the clock starts
-		fds[FD_CLOCK].fd = app->clock.fd;
+		late_fds(app, fds);
 		if (!flush(wl, &fds[FD_WAYLAND].events)) {
 			wl_display_cancel_read(wl);
 			goto lost;
@@ -268,6 +322,8 @@ int app_run(const struct config *config, const struct timespec *start,
 		.auth = {.pid = -1, .fd = -1},
 		.input = {.repeat_fd = -1},
 		.clock = {.fd = -1},
+		.field = {.timer_fd = -1},
+		.worker = {.fd = -1},
 		.config = config,
 		.signal_fd = -1,
 		.locked_fd = locked_fd,
@@ -276,13 +332,16 @@ int app_run(const struct config *config, const struct timespec *start,
 	// the helper forks first, before any thread or descriptor it must not
 	// inherit
 	if (auth_start(&app.auth) && open_signals(&app) &&
-		input_init(&app.input, &app.auth) &&
+		field_init(&app.field) && input_init(&app.input, &app.auth) &&
 		display_connect(&app.display, config, &app.input) &&
 		display_lock(&app.display, start)) {
 		status = run(&app);
 	}
 	display_disconnect(&app.display);
+	worker_stop(&app.worker);
+	ui_content_finish(&app.content);
 	clock_stop(&app.clock);
+	field_finish(&app.field);
 	input_finish(&app.input);
 	if (app.signal_fd >= 0) {
 		close(app.signal_fd);

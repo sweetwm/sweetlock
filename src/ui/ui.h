@@ -6,10 +6,15 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "ui/avatar.h"
 #include "ui/user.h"
 
+struct auth;
 struct clock;
 struct config;
+struct field;
+struct input;
+struct worker;
 
 // each part is its own subsurface, so a clock tick never redraws the field
 enum ui_part {
@@ -30,21 +35,36 @@ struct ui_rect {
 struct ui_content {
 	const struct config *config;
 	const struct clock *clock;
-	char name[USER_NAME_SIZE];
+	const struct input *input;
+	const struct auth *auth;
+	const struct field *field;
+	struct user user;
+	struct avatar avatar;
 };
 
-// one output's shaped text, at that output's scale
+// enough to fill the field; more shows as an ellipsis
+enum { UI_DOTS_MAX = 64 };
+
+// one output's shaped text and rasters, at that output's scale
 struct ui {
 	const struct ui_content *content;
 	uint32_t scale;
 	PangoLayout *time;
 	PangoLayout *date;
 	PangoLayout *name;
+	PangoLayout *entry;
+	// the avatar cut to its circle at this scale, made on first use
+	cairo_surface_t *avatar;
+	// a bullet per code point, three bytes each
+	char dots[UI_DOTS_MAX * 3 + 1];
 };
 
-// starts the clock and looks up the name; a failure leaves that text empty
-void ui_content_init(struct ui_content *content, const struct config *config,
-	struct clock *clock);
+
+void ui_content_start(
+	struct ui_content *content, struct clock *clock, struct worker *worker);
+
+// after the worker has stopped
+void ui_content_finish(struct ui_content *content);
 
 bool ui_shows(const struct ui_content *content, enum ui_part part);
 
@@ -56,8 +76,14 @@ struct ui *ui_create(const struct ui_content *content, uint32_t scale);
 
 void ui_set_scale(struct ui *ui, uint32_t scale);
 
-bool ui_draw(
-	const struct ui *ui, enum ui_part part, cairo_t *cr, int32_t width);
+// rect is where ui_place put the part
+bool ui_draw(struct ui *ui, enum ui_part part, cairo_t *cr,
+	const struct ui_rect *rect);
+
+// whether a point in the login part, in logical pixels, is on the reveal
+// toggle
+bool ui_hits_eye(
+	const struct ui *ui, const struct ui_rect *rect, double x, double y);
 
 void ui_destroy(struct ui *ui);
 

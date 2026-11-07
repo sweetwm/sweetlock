@@ -14,6 +14,9 @@ void text_set_font(PangoLayout *layout, const char *family, PangoWeight weight,
 // sets the text only when it differs, so an unchanged layout stays shaped
 void text_set(PangoLayout *layout, const char *text);
 
+// x is the left edge of the text, snapped to the pixel grid like the baseline
+void text_draw(cairo_t *cr, PangoLayout *layout, double x, double centre_y);
+
 void text_draw_centred(
 	cairo_t *cr, PangoLayout *layout, double width, double centre_y);
 
