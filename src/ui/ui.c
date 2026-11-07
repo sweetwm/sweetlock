@@ -118,6 +118,13 @@ bool ui_place(enum ui_part part, int32_t width, int32_t height, uint32_t scale,
 	}
 	int32_t y = part == UI_CLOCK ? theme.clock_top
 				     : height / 2 - theme.login_above;
+	// on a short output the login part moves down rather than cover the
+	// date
+	int32_t clock_bottom = snap(theme.clock_top, step) +
+			       round_up(theme.clock_height, step);
+	if (part == UI_LOGIN && y < clock_bottom) {
+		y = clock_bottom;
+	}
 	int32_t h = part == UI_CLOCK ? theme.clock_height : theme.login_height;
 	*rect = (struct ui_rect){
 		.x = snap((width - w) / 2, step),
