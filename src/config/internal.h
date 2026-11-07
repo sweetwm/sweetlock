@@ -10,6 +10,8 @@ enum config_type {
 	CONFIG_BOOL,
 	CONFIG_COLOR,
 	CONFIG_STRING,
+	// empty, absolute, or under ~/
+	CONFIG_PATH,
 };
 
 struct config_key {

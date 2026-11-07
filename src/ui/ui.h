@@ -59,7 +59,6 @@ struct ui {
 	char dots[UI_DOTS_MAX * 3 + 1];
 };
 
-
 void ui_content_start(
 	struct ui_content *content, struct clock *clock, struct worker *worker);
 

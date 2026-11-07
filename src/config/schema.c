@@ -33,7 +33,7 @@ static const struct config_key keys[] = {
 	KEY("date.enabled", CONFIG_BOOL, date.enabled),
 	KEY("date.format", CONFIG_STRING, date.format),
 	KEY("avatar.enabled", CONFIG_BOOL, avatar.enabled),
-	KEY("avatar.path", CONFIG_STRING, avatar.path),
+	KEY("avatar.path", CONFIG_PATH, avatar.path),
 	KEY("username.enabled", CONFIG_BOOL, username.enabled),
 	KEY("username.text", CONFIG_STRING, username.text),
 	KEY("input.placeholder", CONFIG_STRING, input.placeholder),
@@ -117,19 +117,27 @@ static bool parse_bool(const char *text, size_t length, bool *out) {
 	return false;
 }
 
-// the text is shown or handed to strftime and Pango, so no controls
-static bool parse_string(const char *text, size_t length, char *out) {
-	if (length >= CONFIG_STRING_SIZE || !utf8_is_plain(text, length)) {
+// the text is shown, logged or handed to strftime and Pango, so no controls
+static bool parse_text(
+	const char *text, size_t length, char *out, size_t size) {
+	if (length >= size || !utf8_is_plain(text, length)) {
 		return false;
 	}
 	memcpy(out, text, length);
 	// zeroed past the end, so two equal configs compare equal byte for byte
-	memset(out + length, 0, CONFIG_STRING_SIZE - length);
+	memset(out + length, 0, size - length);
 	return true;
 }
 
-// the string message spells out the limit
+static bool parse_path(const char *text, size_t length, char *out) {
+	bool anchored = length == 0 || text[0] == '/' ||
+			(length >= 2 && text[0] == '~' && text[1] == '/');
+	return anchored && parse_text(text, length, out, CONFIG_PATH_SIZE);
+}
+
+// the messages spell out the limits
 static_assert(CONFIG_STRING_SIZE == 128, "update the string message");
+static_assert(CONFIG_PATH_SIZE == 4096, "update the path message");
 
 const char *config_key_expected(const struct config_key *key) {
 	switch (key->type) {
@@ -140,6 +148,9 @@ const char *config_key_expected(const struct config_key *key) {
 	case CONFIG_STRING:
 		return "expected a string of at most 127 bytes of UTF-8 "
 		       "without control characters";
+	case CONFIG_PATH:
+		return "expected an absolute path or one starting with ~/, at "
+		       "most 4095 bytes of UTF-8 without control characters";
 	}
 	return "unexpected value";
 }
@@ -152,7 +163,9 @@ static bool parse(const struct config_key *key, const char *value,
 	case CONFIG_COLOR:
 		return parse_color(value, length, field);
 	case CONFIG_STRING:
-		return parse_string(value, length, field);
+		return parse_text(value, length, field, CONFIG_STRING_SIZE);
+	case CONFIG_PATH:
+		return parse_path(value, length, field);
 	}
 	return false;
 }
@@ -194,6 +207,7 @@ void config_log(const struct config *config) {
 			break;
 		}
 		case CONFIG_STRING:
+		case CONFIG_PATH:
 			log_debug("config %s=\"%s\"", keys[i].path,
 				(const char *)field);
 			break;

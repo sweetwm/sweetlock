@@ -20,7 +20,8 @@ format = "%A, %B %-d"
 
 [avatar]
 enabled = true
-# A PNG, as an absolute path or one starting with ~/. Empty: the
+# A PNG, as an absolute path or one starting with ~/ (up to 4095 bytes;
+# relative paths are rejected). Empty: the
 # AccountsService icon (/var/lib/AccountsService/icons/LOGIN), then ~/.face,
 # then a drawn outline. Pictures that are not square show their centre.
 path = ""

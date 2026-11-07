@@ -9,11 +9,13 @@
 #include "log.h"
 
 // an over-long path is left empty, so it is skipped
-static void join(char path[PATH_MAX], const char *head, const char *tail) {
+static bool join(char path[PATH_MAX], const char *head, const char *tail) {
 	int length = snprintf(path, PATH_MAX, "%s%s", head, tail);
 	if (length < 0 || length >= PATH_MAX) {
 		path[0] = '\0';
+		return false;
 	}
+	return true;
 }
 
 static void set_paths(
@@ -23,13 +25,17 @@ static void set_paths(
 	if (home && home[0] != '/') {
 		home = NULL;
 	}
+	// the schema only lets through empty, absolute and ~/ paths
 	if (configured[0] == '/') {
 		join(avatar->paths[0], configured, "");
-	} else if (home && strncmp(configured, "~/", 2) == 0) {
-		join(avatar->paths[0], home, configured + 1);
-	} else if (configured[0]) {
-		log_warn("avatar.path: expected an absolute path, or one under "
-			 "~/ with HOME set; ignoring it");
+	} else if (configured[0] && !home) {
+		log_warn("avatar.path: ~/ needs HOME to be an absolute path; "
+			 "ignoring it");
+	} else if (configured[0] &&
+		   !join(avatar->paths[0], home, configured + 1)) {
+		log_warn("avatar.path: longer than %d bytes once ~/ is "
+			 "expanded; ignoring it",
+			PATH_MAX - 1);
 	}
 	if (login[0] && !strchr(login, '/')) {
 		join(avatar->paths[1], "/var/lib/AccountsService/icons/",
