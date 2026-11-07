@@ -10,6 +10,8 @@ enum {
 	CONFIG_ERROR_SIZE = 256,
 	// every string key, its NUL included
 	CONFIG_STRING_SIZE = 128,
+	// every path key, its NUL included: PATH_MAX
+	CONFIG_PATH_SIZE = 4096,
 };
 
 struct color {
@@ -34,7 +36,7 @@ struct config {
 	struct {
 		bool enabled;
 		// empty: the AccountsService icon, then ~/.face
-		char path[CONFIG_STRING_SIZE];
+		char path[CONFIG_PATH_SIZE];
 	} avatar;
 	struct {
 		bool enabled;
