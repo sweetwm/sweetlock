@@ -21,6 +21,8 @@ struct backdrop {
 	struct wl_list link;
 	int32_t width;
 	int32_t height;
+	// background_scale's, so outputs share unless the scale changes pixels
+	uint32_t scale;
 	struct buffer *buffer;
 	struct background_job job;
 	enum backdrop_state state;
@@ -31,7 +33,7 @@ struct backdrop {
 
 struct backdrop *backdrop_get(struct display *display,
 	const struct config *config, struct worker *worker, int32_t width,
-	int32_t height);
+	int32_t height, uint32_t scale);
 
 // a backdrop without references goes once the worker has handed it back
 void backdrop_put(struct backdrop *backdrop);

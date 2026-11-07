@@ -1,7 +1,10 @@
 #ifndef SWEETLOCK_BACKGROUND_JOB_H
 #define SWEETLOCK_BACKGROUND_JOB_H
 
+#include <cairo.h>
+#include <limits.h>
 #include <stdbool.h>
+#include <sys/stat.h>
 
 #include "background/cache.h"
 #include "config.h"
@@ -24,6 +27,9 @@ enum background_result {
 struct background_job {
 	struct worker_job base;
 	const struct config *config;
+	// background.image.path expanded; empty after a failure
+	char path[PATH_MAX];
+	uint32_t scale;
 	struct cache_image image;
 	struct cache_key key;
 	enum background_phase phase;
@@ -36,13 +42,20 @@ struct background_job {
 	char error[BACKGROUND_ERROR_SIZE];
 };
 
-// everything in the config and the image size that changes the pixels
+// the scale when it changes the pixels, otherwise 0
+uint32_t background_scale(const struct config *config, uint32_t scale);
+
 void background_key(const struct config *config, int32_t width, int32_t height,
-	struct cache_key *key);
+	uint32_t scale, const struct stat *file, struct cache_key *key);
 
 // main thread; config and the pixels must outlive the job
 void background_job_init(struct background_job *job,
-	const struct config *config, const struct cache_image *image);
+	const struct config *config, const struct cache_image *image,
+	uint32_t scale);
+
+// draws without the cache, on the calling thread, as the preview does
+bool background_paint(const struct config *config, uint32_t scale,
+	cairo_surface_t *target, char *error, size_t error_size);
 
 void background_job_save(struct background_job *job);
 

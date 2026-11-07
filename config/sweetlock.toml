@@ -5,9 +5,9 @@
 #   sweetlock --set background.mode=radial
 
 [background]
-# "solid", "gradient", "radial" or "layered". Anything but solid is drawn
-# once per output size and cached in ~/.cache/sweetlock (up to 6 entries,
-# each 4 bytes a pixel), so later locks read it back in one go
+# "solid", "gradient", "radial", "layered" or "image". Anything but solid is
+# drawn once per output size and cached in ~/.cache/sweetlock (up to 6
+# entries, each 4 bytes a pixel), so later locks read it back in one go
 mode = "solid"
 # The solid colour, and the first frame shown in every mode, as "#rrggbb".
 # Backgrounds are opaque, so the alpha of "#rrggbbaa" is ignored here and in
@@ -53,6 +53,21 @@ x = 72
 y = 70
 size = 38
 
+# A wallpaper, for mode = "image". Also: --image PATH (which sets the mode
+# too), --fit, --dim and --blur
+[background.image]
+# A PNG or JPEG, as an absolute path or one starting with ~/. A missing or
+# unreadable file keeps background.color
+path = ""
+# "fill" covers the output and crops, "fit" shows all of it on
+# background.color, "center" puts one image pixel on each output pixel,
+# "stretch" ignores the aspect ratio
+fit = "fill"
+# Darkens the image, in percent, 0 to 100
+dim = 0
+# Blur strength in logical pixels (a Gaussian's sigma), 0 to 100; 0 is off
+blur = 0
+
 [clock]
 enabled = true
 # strftime(3) format; the clock ticks every second when it shows seconds
@@ -65,7 +80,7 @@ format = "%A, %B %-d"
 
 [avatar]
 enabled = true
-# A PNG, as an absolute path or one starting with ~/ (up to 4095 bytes;
+# A PNG or JPEG, as an absolute path or one starting with ~/ (up to 4095 bytes;
 # relative paths are rejected). Empty: the
 # AccountsService icon (/var/lib/AccountsService/icons/LOGIN), then ~/.face,
 # then a drawn outline. Pictures that are not square show their centre.

@@ -51,6 +51,7 @@ static const struct config defaults = {
 								72, 70, 38},
 						},
 				},
+			.image = {.path = "", .fit = FIT_FILL},
 		},
 	.clock = {.enabled = true, .format = "%H:%M"},
 	.date = {.enabled = true, .format = "%A, %B %-d"},
@@ -68,12 +69,15 @@ static const struct config defaults = {
 };
 
 static const char *const modes[] = {
-	"solid", "gradient", "radial", "layered", NULL};
+	"solid", "gradient", "radial", "layered", "image", NULL};
 // a layered background cannot be its own base
 static const char *const bases[] = {"solid", "gradient", "radial", NULL};
 
+static const char *const fits[] = {"fill", "fit", "center", "stretch", NULL};
+
 // enum fields are written as an int
 static_assert(sizeof(enum background_mode) == sizeof(int), "enum size");
+static_assert(sizeof(enum background_fit) == sizeof(int), "enum size");
 
 #define FIELD(field) offsetof(struct config, field)
 #define KEY(path, type, field) {path, type, FIELD(field), 0, 0, 0, NULL}
@@ -106,6 +110,10 @@ static const struct config_key keys[] = {
 	BLOB("background.layered.blob.x", CONFIG_INT, x, 0, 100),
 	BLOB("background.layered.blob.y", CONFIG_INT, y, 0, 100),
 	BLOB("background.layered.blob.size", CONFIG_INT, size, 1, 100),
+	KEY("background.image.path", CONFIG_PATH, background.image.path),
+	ENUM("background.image.fit", background.image.fit, fits),
+	INT("background.image.dim", background.image.dim, 0, 100),
+	INT("background.image.blur", background.image.blur, 0, 100),
 	KEY("clock.enabled", CONFIG_BOOL, clock.enabled),
 	KEY("clock.format", CONFIG_STRING, clock.format),
 	KEY("date.enabled", CONFIG_BOOL, date.enabled),

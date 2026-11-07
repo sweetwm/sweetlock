@@ -28,6 +28,8 @@ struct display {
 	struct wl_list seats;
 	// generated backgrounds, one per physical size in use
 	struct wl_list backdrops;
+	// a failed background is logged for the first output only
+	bool background_warned;
 	// every seat's keyboard types into it
 	struct input *input;
 	bool failed;

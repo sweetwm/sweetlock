@@ -9,10 +9,12 @@
 
 struct backdrop *backdrop_get(struct display *display,
 	const struct config *config, struct worker *worker, int32_t width,
-	int32_t height) {
+	int32_t height, uint32_t scale) {
+	uint32_t shared = background_scale(config, scale);
 	struct backdrop *backdrop = NULL;
 	wl_list_for_each(backdrop, &display->backdrops, link) {
-		if (backdrop->width == width && backdrop->height == height) {
+		if (backdrop->width == width && backdrop->height == height &&
+			backdrop->scale == shared) {
 			backdrop->refs++;
 			return backdrop;
 		}
@@ -25,6 +27,7 @@ struct backdrop *backdrop_get(struct display *display,
 	*backdrop = (struct backdrop){
 		.width = width,
 		.height = height,
+		.scale = shared,
 		.state = BACKDROP_FAILED,
 		.refs = 1,
 	};
@@ -45,7 +48,7 @@ struct backdrop *backdrop_get(struct display *display,
 		.height = height,
 		.stride = width * 4,
 	};
-	background_job_init(&backdrop->job, config, &image);
+	background_job_init(&backdrop->job, config, &image, scale);
 	backdrop->state = BACKDROP_DRAWING;
 	backdrop->working = true;
 	worker_submit(worker, &backdrop->job.base);
@@ -62,9 +65,18 @@ static void loaded(struct display *display, struct worker *worker,
 	struct backdrop *backdrop) {
 	struct background_job *job = &backdrop->job;
 	if (job->result == BACKGROUND_FAILED) {
-		log_warn("background %dx%d: %s; keeping the base colour",
-			backdrop->width, backdrop->height, job->error);
 		backdrop->state = BACKDROP_FAILED;
+		// every output fails the same way, so once is enough
+		if (!display->background_warned && job->path[0]) {
+			log_warn("background image %s: %s; keeping the base "
+				 "colour",
+				job->path, job->error);
+		} else if (!display->background_warned) {
+			log_warn("background %dx%d: %s; keeping the base "
+				 "colour",
+				backdrop->width, backdrop->height, job->error);
+		}
+		display->background_warned = true;
 		return;
 	}
 	if (job->error[0]) {

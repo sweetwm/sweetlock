@@ -43,6 +43,7 @@ wayland_scanner = find_program(
 
 xkbcommon = dependency('xkbcommon')
 pam = dependency('pam')
+libjpeg = dependency('libjpeg')
 
 subdir('protocol')
 
@@ -80,9 +81,11 @@ executable(
 	'src/auth/auth.c',
 	'src/auth/helper.c',
 	'src/auth/message.c',
+	'src/background/blur.c',
 	'src/background/cache.c',
 	'src/background/draw.c',
 	'src/background/job.c',
+	'src/background/wallpaper.c',
 	'src/config/load.c',
 	'src/config/parse.c',
 	'src/config/schema.c',
@@ -91,7 +94,9 @@ executable(
 	'src/input/input.c',
 	'src/input/keyboard.c',
 	'src/input/password.c',
+	'src/jpeg.c',
 	'src/log.c',
+	'src/path.c',
 	'src/render/icon.c',
 	'src/render/text.c',
 	'src/scale.c',
@@ -120,6 +125,7 @@ executable(
 		pam,
 		cairo,
 		pangocairo,
+		libjpeg,
 		libm,
 		threads,
 	],

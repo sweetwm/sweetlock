@@ -130,6 +130,7 @@ static void draw_mode(cairo_t *cr, const struct config *config,
 		return;
 	case BACKGROUND_SOLID:
 	case BACKGROUND_LAYERED:
+	case BACKGROUND_IMAGE:
 		break;
 	}
 	struct color c = config->background.color;

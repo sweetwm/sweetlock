@@ -7,42 +7,21 @@
 
 #include "image.h"
 #include "log.h"
-
-// an over-long path is left empty, so it is skipped
-static bool join(char path[PATH_MAX], const char *head, const char *tail) {
-	int length = snprintf(path, PATH_MAX, "%s%s", head, tail);
-	if (length < 0 || length >= PATH_MAX) {
-		path[0] = '\0';
-		return false;
-	}
-	return true;
-}
+#include "path.h"
 
 static void set_paths(
 	struct avatar *avatar, const char *configured, const char *login) {
-	const char *home = getenv("HOME");
-	// relative values are ignored, as for the config path
-	if (home && home[0] != '/') {
-		home = NULL;
-	}
-	// the schema only lets through empty, absolute and ~/ paths
-	if (configured[0] == '/') {
-		join(avatar->paths[0], configured, "");
-	} else if (configured[0] && !home) {
-		log_warn("avatar.path: ~/ needs HOME to be an absolute path; "
-			 "ignoring it");
-	} else if (configured[0] &&
-		   !join(avatar->paths[0], home, configured + 1)) {
-		log_warn("avatar.path: longer than %d bytes once ~/ is "
-			 "expanded; ignoring it",
-			PATH_MAX - 1);
+	const char *why = NULL;
+	if (!path_expand(avatar->paths[0], configured, &why)) {
+		log_warn("avatar.path: %s; ignoring it", why);
 	}
 	if (login[0] && !strchr(login, '/')) {
-		join(avatar->paths[1], "/var/lib/AccountsService/icons/",
+		path_join(avatar->paths[1], "/var/lib/AccountsService/icons/",
 			login);
 	}
+	const char *home = path_home();
 	if (home) {
-		join(avatar->paths[2], home, "/.face");
+		path_join(avatar->paths[2], home, "/.face");
 	}
 }
 
