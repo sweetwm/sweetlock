@@ -309,8 +309,10 @@ bool cache_write(int dir, const struct cache_key *key,
 	if (fd < 0) {
 		return fail_errno(error, error_size, temporary);
 	}
+	// a crash after the rename must not leave a full-length entry of zeros
 	bool written = write_all(fd, header, header_length) &&
-		       write_all(fd, image->pixels, pixel_bytes(image));
+		       write_all(fd, image->pixels, pixel_bytes(image)) &&
+		       fdatasync(fd) == 0;
 	if (!written) {
 		fail_errno(error, error_size, temporary);
 	}
