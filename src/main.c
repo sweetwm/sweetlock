@@ -1,16 +1,31 @@
+#include <fcntl.h>
 #include <locale.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <unistd.h>
 
 #include "app.h"
 #include "args.h"
 #include "config.h"
 #include "log.h"
 
+// a closed stdio number goes to the next socket we open, and the log with it
+static bool stdio_open(void) {
+	for (int fd = STDIN_FILENO; fd <= STDERR_FILENO; fd++) {
+		if (fcntl(fd, F_GETFD) < 0 && open("/dev/null", O_RDWR) != fd) {
+			return false;
+		}
+	}
+	return true;
+}
+
 int main(int argc, char **argv) {
 	struct timespec start = {0};
 	clock_gettime(CLOCK_MONOTONIC, &start);
+	if (!stdio_open()) {
+		return EXIT_FAILURE;
+	}
 	bool log_level_ok = log_init();
 	if (!app_protect()) {
 		return EXIT_FAILURE;
