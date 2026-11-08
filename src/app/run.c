@@ -1,6 +1,7 @@
 #include "app.h"
 
 #include <errno.h>
+#include <malloc.h>
 #include <poll.h>
 #include <signal.h>
 #include <stdlib.h>
@@ -18,6 +19,7 @@
 #include "ui/clock.h"
 #include "ui/field.h"
 #include "ui/ui.h"
+#include "ui/user.h"
 #include "wayland/backdrop.h"
 #include "wayland/display.h"
 #include "worker.h"
@@ -48,6 +50,7 @@ struct app {
 	struct field field;
 	struct worker worker;
 	const struct config *config;
+	struct user user;
 	struct ui_content content;
 	enum ui_stage stage;
 	int signal_fd;
@@ -212,9 +215,8 @@ static void report_locked(struct app *app) {
 	}
 }
 
-// the worker and all drawing only after locked, so neither delays it;
-// backgrounds go to the worker before the avatar
 static void start_ui(struct app *app) {
+	(void)mallopt(M_MMAP_THRESHOLD, 1 << 20);
 	worker_start(&app->worker);
 	app->content = (struct ui_content){
 		.config = app->config,
@@ -222,6 +224,7 @@ static void start_ui(struct app *app) {
 		.auth = &app->auth,
 		.field = &app->field,
 		.worker = &app->worker,
+		.user = &app->user,
 	};
 	display_show_backgrounds(&app->display, &app->content);
 	ui_content_start(&app->content, &app->clock);
@@ -353,7 +356,9 @@ int app_run(const struct config *config, const struct timespec *start,
 		.locked_fd = locked_fd,
 	};
 	int status = EXIT_FAILURE;
-	if (auth_start(&app.auth) && open_signals(&app) &&
+	// one lookup for PAM and the UI, since with sssd or LDAP it can be slow
+	user_lookup(&app.user, config->username.text);
+	if (auth_start(&app.auth, app.user.login) && open_signals(&app) &&
 		field_init(&app.field) && input_init(&app.input, &app.auth) &&
 		display_connect(&app.display, config, &app.input) &&
 		display_lock(&app.display, start)) {

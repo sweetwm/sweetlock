@@ -56,8 +56,8 @@ static void run(struct worker_job *job) {
 		cairo_surface_t *image = NULL;
 		enum file_result result = FILE_MISSING;
 		if (avatar->paths[i][0]) {
-			result = image_load(avatar->paths[i], &image, error,
-				AVATAR_ERROR_SIZE);
+			result = image_load(avatar->paths[i], AVATAR_IMAGE_SIZE,
+				&image, error, AVATAR_ERROR_SIZE);
 		}
 		if (result == FILE_OK) {
 			avatar->image = square(image);

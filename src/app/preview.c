@@ -11,6 +11,7 @@
 #include "ui/clock.h"
 #include "ui/field.h"
 #include "ui/ui.h"
+#include "ui/user.h"
 
 static bool draw_part(struct ui *ui, enum ui_part part, cairo_t *cr,
 	int32_t width, int32_t height) {
@@ -109,11 +110,14 @@ int app_preview(const struct config *config, const struct preview *preview) {
 	struct field field = {
 		.timer_fd = -1, .failed = state == PREVIEW_FAILED};
 	struct clock clock = {.fd = -1};
+	struct user user;
+	user_lookup(&user, config->username.text);
 	struct ui_content content = {
 		.config = config,
 		.input = &input,
 		.auth = &auth,
 		.field = &field,
+		.user = &user,
 	};
 	ui_content_start(&content, &clock);
 	int status = write_png(&content, preview);

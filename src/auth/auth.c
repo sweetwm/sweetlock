@@ -2,9 +2,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <pwd.h>
 #include <signal.h>
-#include <string.h>
 #include <sys/socket.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -14,13 +12,10 @@
 #include "input/password.h"
 #include "log.h"
 
-bool auth_start(struct auth *auth) {
+bool auth_start(struct auth *auth, const char *login) {
 	*auth = (struct auth){.pid = -1, .fd = -1};
-	errno = 0;
-	const struct passwd *user = getpwuid(getuid());
-	if (!user) {
-		log_error("failed to look up the current user: %s",
-			errno ? strerror(errno) : "no such user");
+	if (!login[0]) {
+		log_error("failed to look up the current user");
 		return false;
 	}
 
@@ -33,7 +28,7 @@ bool auth_start(struct auth *auth) {
 	pid_t pid = fork();
 	if (pid == 0) {
 		close(fds[0]);
-		helper_run(fds[1], parent, user->pw_name);
+		helper_run(fds[1], parent, login);
 	}
 	if (pid < 0) {
 		log_error("failed to start the PAM helper: %m");
