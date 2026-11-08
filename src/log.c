@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 static const char *const level_names[] = {"error", "warn", "info", "debug"};
 static const char *const level_labels[] = {"ERROR", " WARN", " INFO", "DEBUG"};
@@ -39,14 +40,37 @@ void log_at(enum log_level level, const char *fmt, ...) {
 	if (gmtime_r(&now.tv_sec, &tm)) {
 		strftime(stamp, sizeof stamp, "%Y-%m-%dT%H:%M:%S", &tm);
 	}
-	fprintf(stderr, "%s.%06ldZ %s sweetlock: ", stamp, now.tv_nsec / 1000,
-		level_labels[level]);
+	// one write per line, so the locker's and the helper's lines never mix
+	char line[LOG_LINE_MAX];
+	int prefix =
+		snprintf(line, sizeof line, "%s.%06ldZ %s sweetlock: ", stamp,
+			now.tv_nsec / 1000, level_labels[level]);
+	size_t length = prefix > 0 ? (size_t)prefix : 0;
 
 	va_list args;
 	va_start(args, fmt);
 	errno = saved;
-	vfprintf(stderr, fmt, args);
+	int message = vsnprintf(line + length, sizeof line - length, fmt, args);
 	va_end(args);
-	fputc('\n', stderr);
+	// the newline takes the place of vsnprintf's NUL
+	size_t room = sizeof line - length - 1;
+	if (message > 0 && (size_t)message > room) {
+		length += room;
+		line[length - 3] = line[length - 2] = line[length - 1] = '.';
+	} else if (message > 0) {
+		length += (size_t)message;
+	}
+	line[length++] = '\n';
+	for (size_t done = 0; done < length;) {
+		ssize_t written =
+			write(STDERR_FILENO, line + done, length - done);
+		if (written < 0 && errno == EINTR) {
+			continue;
+		}
+		if (written <= 0) {
+			break;
+		}
+		done += (size_t)written;
+	}
 	errno = saved;
 }
