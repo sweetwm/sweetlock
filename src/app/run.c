@@ -66,6 +66,7 @@ enum signal_action {
 
 static void signal_set(sigset_t *set) {
 	sigemptyset(set);
+	sigaddset(set, SIGHUP);
 	sigaddset(set, SIGTERM);
 	sigaddset(set, SIGINT);
 	sigaddset(set, SIGUSR1);
@@ -91,8 +92,8 @@ bool app_protect(void) {
 	return true;
 }
 
-// SIGTERM and SIGINT leave the session locked, as the protocol requires of
-// a locker that exits without unlocking
+// SIGTERM and SIGINT exit and leave the session locked, as the protocol
+// requires, SIGHUP only means the terminal that started us is gone
 static enum signal_action read_signals(int fd) {
 	enum signal_action action = SIGNAL_NONE;
 	struct signalfd_siginfo info;
@@ -103,6 +104,8 @@ static enum signal_action read_signals(int fd) {
 			if (action == SIGNAL_NONE) {
 				action = SIGNAL_UNLOCK;
 			}
+		} else if (info.ssi_signo == SIGHUP) {
+			log_info("received SIGHUP; staying locked");
 		} else {
 			log_info("received SIG%s; exiting without unlocking",
 				name ? name : "?");
