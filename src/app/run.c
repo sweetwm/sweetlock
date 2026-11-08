@@ -14,6 +14,7 @@
 #include "input/input.h"
 #include "input/password.h"
 #include "log.h"
+#include "render/text.h"
 #include "ui/clock.h"
 #include "ui/field.h"
 #include "ui/ui.h"
@@ -211,8 +212,8 @@ static void report_locked(struct app *app) {
 	}
 }
 
-// the worker, then Pango and fontconfig, only after locked so neither
-// delays it, backgrounds go to the worker before the avatar
+// the worker and all drawing only after locked, so neither delays it;
+// backgrounds go to the worker before the avatar
 static void start_ui(struct app *app) {
 	worker_start(&app->worker);
 	app->content = (struct ui_content){
@@ -352,12 +353,12 @@ int app_run(const struct config *config, const struct timespec *start,
 		.locked_fd = locked_fd,
 	};
 	int status = EXIT_FAILURE;
-	// the helper forks first, before any thread or descriptor it must not
-	// inherit
 	if (auth_start(&app.auth) && open_signals(&app) &&
 		field_init(&app.field) && input_init(&app.input, &app.auth) &&
 		display_connect(&app.display, config, &app.input) &&
 		display_lock(&app.display, start)) {
+		wl_display_flush(app.display.wl);
+		text_prepare();
 		status = run(&app);
 	}
 	// the worker first: it may be drawing into a backdrop's buffer

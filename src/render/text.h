@@ -4,6 +4,9 @@
 #include <cairo.h>
 #include <pango/pango.h>
 
+// fontconfig loads in Pango's own thread from here; this returns at once
+void text_prepare(void);
+
 // one line, ellipsized at its width, with tabular figures
 PangoLayout *text_layout_create(void);
 
