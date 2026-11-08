@@ -4,6 +4,10 @@
 #include <pango/pangocairo.h>
 #include <string.h>
 
+void text_prepare(void) {
+	pango_cairo_font_map_get_default();
+}
+
 PangoLayout *text_layout_create(void) {
 	PangoContext *context = pango_font_map_create_context(
 		pango_cairo_font_map_get_default());
