@@ -14,6 +14,7 @@
 #include "scale.h"
 #include "ui/clock.h"
 #include "ui/field.h"
+#include "ui/user.h"
 
 // logical pixels, placed like default.png; login offsets are from the top
 // of the login part
@@ -77,10 +78,9 @@ void ui_content_start(struct ui_content *content, struct clock *clock) {
 	if ((time || date) && !clock_start(clock, time, date)) {
 		log_warn("showing no clock");
 	}
-	user_lookup(&content->user, config->username.text);
 	if (config->avatar.enabled) {
 		avatar_load(&content->avatar, config->avatar.path,
-			content->user.login, content->worker);
+			content->user->login, content->worker);
 	}
 }
 
@@ -176,7 +176,7 @@ struct ui *ui_create(const struct ui_content *content, uint32_t scale) {
 		return NULL;
 	}
 	set_fonts(ui);
-	text_set(ui->name, content->user.name);
+	text_set(ui->name, content->user->name);
 	return ui;
 }
 

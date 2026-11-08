@@ -21,8 +21,9 @@ enum auth_result {
 	AUTH_LOST,
 };
 
-// forks the PAM helper; must run before any library starts a thread
-bool auth_start(struct auth *auth);
+// forks the PAM helper; must run before any library starts a thread, and
+// fails on an empty login
+bool auth_start(struct auth *auth, const char *login);
 
 // the caller wipes the password once this returns
 bool auth_submit(struct auth *auth, const struct password *password);

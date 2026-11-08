@@ -152,16 +152,22 @@ cairo_surface_t *image_decode(const unsigned char *data, size_t length,
 		data, length, width, height, fraction, error, error_size);
 }
 
-enum file_result image_load(const char *path, cairo_surface_t **image,
-	char *error, size_t error_size) {
+enum file_result image_load(const char *path, uint32_t side,
+	cairo_surface_t **image, char *error, size_t error_size) {
 	*image = NULL;
 	char *data = NULL;
 	size_t length = 0;
 	enum file_result result = file_read(
 		path, IMAGE_FILE_MAX, &data, &length, error, error_size);
 	if (result == FILE_OK) {
-		*image = image_decode((const unsigned char *)data, length, 1,
-			error, error_size);
+		uint32_t width = 0;
+		uint32_t height = 0;
+		image_probe(
+			(const unsigned char *)data, length, &width, &height);
+		uint32_t shorter = width < height ? width : height;
+		double fraction = shorter > side ? (double)side / shorter : 1;
+		*image = image_decode((const unsigned char *)data, length,
+			fraction, error, error_size);
 		result = *image ? FILE_OK : FILE_FAILED;
 	}
 	free(data);

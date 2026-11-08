@@ -7,13 +7,13 @@
 #include <stdint.h>
 
 #include "ui/avatar.h"
-#include "ui/user.h"
 
 struct auth;
 struct clock;
 struct config;
 struct field;
 struct input;
+struct user;
 struct worker;
 
 // each part is its own subsurface, so a clock tick never redraws the field
@@ -40,7 +40,7 @@ struct ui_content {
 	const struct field *field;
 	// NULL loads in the foreground, as the preview does
 	struct worker *worker;
-	struct user user;
+	const struct user *user;
 	struct avatar avatar;
 };
 
