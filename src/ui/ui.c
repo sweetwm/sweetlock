@@ -68,8 +68,6 @@ static const struct {
 	.outline = 1.5,
 };
 
-enum { UI_OUTPUT_MAX = 1 << 16 };
-
 void ui_content_start(struct ui_content *content, struct clock *clock) {
 	const struct config *config = content->config;
 	content->clock = clock;
@@ -106,8 +104,8 @@ static int32_t round_up(int32_t value, int32_t step) {
 
 bool ui_place(enum ui_part part, int32_t width, int32_t height, uint32_t scale,
 	struct ui_rect *rect) {
-	if (width <= 0 || height <= 0 || width > UI_OUTPUT_MAX ||
-		height > UI_OUTPUT_MAX) {
+	if (width <= 0 || height <= 0 || width > SCALE_SIDE_MAX ||
+		height > SCALE_SIDE_MAX) {
 		return false;
 	}
 	int32_t step = scale_step(scale);

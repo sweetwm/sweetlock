@@ -9,7 +9,12 @@ enum {
 	SCALE_DENOMINATOR = 120,
 	// anything above this from the compositor is treated as bogus
 	SCALE_MAX = 8 * SCALE_DENOMINATOR,
+	// longer logical sides get no UI and no background
+	SCALE_SIDE_MAX = 1 << 16,
 };
+
+_Static_assert(SCALE_SIDE_MAX <= INT32_MAX / (SCALE_MAX / SCALE_DENOMINATOR),
+	"scale_physical must fit every bounded side");
 
 bool scale_valid(uint32_t scale);
 

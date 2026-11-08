@@ -243,7 +243,9 @@ bool output_lock(struct output *output) {
 void output_show_background(
 	struct output *output, const struct ui_content *content) {
 	if (!output->mapped ||
-		content->config->background.mode == BACKGROUND_SOLID) {
+		content->config->background.mode == BACKGROUND_SOLID ||
+		output->width > SCALE_SIDE_MAX ||
+		output->height > SCALE_SIDE_MAX) {
 		return;
 	}
 	uint32_t scale = effective_scale(output);

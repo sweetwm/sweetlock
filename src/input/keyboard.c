@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <wayland-client.h>
 #include <xkbcommon/xkbcommon.h>
@@ -32,6 +33,11 @@ struct keyboard {
 
 static struct xkb_keymap *compile(
 	struct xkb_context *xkb, int fd, uint32_t size) {
+	// reading a mapped page past the end of the file raises SIGBUS
+	struct stat file;
+	if (fstat(fd, &file) != 0 || file.st_size < (off_t)size) {
+		return NULL;
+	}
 	char *text = mmap(NULL, size, PROT_READ, MAP_PRIVATE, fd, 0);
 	if (text == MAP_FAILED) {
 		log_warn("failed to map the keymap: %m");
