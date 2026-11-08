@@ -72,6 +72,12 @@ bool app_protect(void) {
 		log_error("failed to make the process undumpable: %m");
 		return false;
 	}
+	// stderr may be a pipe whose reader is gone; the helper inherits this
+	struct sigaction ignore = {.sa_handler = SIG_IGN};
+	if (sigaction(SIGPIPE, &ignore, NULL) != 0) {
+		log_error("failed to ignore SIGPIPE: %m");
+		return false;
+	}
 	sigset_t set;
 	signal_set(&set);
 	if (sigprocmask(SIG_BLOCK, &set, NULL) != 0) {
