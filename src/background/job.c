@@ -216,7 +216,6 @@ static void run(struct worker_job *base) {
 	}
 }
 
-// main thread, since it reads HOME
 static bool image_path(const struct config *config, char path[PATH_MAX],
 	char *error, size_t error_size) {
 	const char *why = NULL;

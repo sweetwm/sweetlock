@@ -3,6 +3,9 @@
 
 #include <stdbool.h>
 
+// a longer line is cut and ends in "..."
+enum { LOG_LINE_MAX = 8192 };
+
 enum log_level {
 	LOG_ERROR,
 	LOG_WARN,
