@@ -8,11 +8,9 @@
 enum {
 	CONFIG_MAX_BYTES = 64 * 1024,
 	CONFIG_ERROR_SIZE = 256,
-	// every string key, its NUL included
+	CONFIG_NOTICE_SIZE = CONFIG_ERROR_SIZE + 32,
 	CONFIG_STRING_SIZE = 128,
-	// every path key, its NUL included: PATH_MAX
 	CONFIG_PATH_SIZE = 4096,
-	// background.layered.blob, an array of tables
 	CONFIG_BLOBS_MAX = 3,
 };
 
@@ -131,11 +129,11 @@ bool config_parse(const char *text, size_t length, struct config *config,
 bool config_set(struct config *config, const char *key, size_t key_length,
 	const char *value, char *error, size_t error_size);
 
-// defaults, then the file unless no_config; never fails, errors are logged
-void config_load(struct config *config, const char *path, bool no_config);
+bool config_load(struct config *config, const char *path, bool no_config,
+	char notice[static CONFIG_NOTICE_SIZE]);
 
-// applies each valid override and logs the rest
-void config_override(struct config *config,
+// applies each valid override and logs the rest; false if any was refused
+bool config_override(struct config *config,
 	const struct config_override *overrides, size_t count);
 
 void config_log(const struct config *config);

@@ -11,8 +11,10 @@
 #include <unistd.h>
 
 #include "auth/message.h"
+#include "auth/service.h"
 #include "input/password.h"
 #include "log.h"
+#include "utf8.h"
 
 struct conversation {
 	struct password *password;
@@ -21,6 +23,7 @@ struct conversation {
 	bool answered;
 	// texts sent in this attempt
 	int texts;
+	bool no_service;
 };
 
 static void free_replies(struct pam_response *replies, int count) {
@@ -35,19 +38,8 @@ static void free_replies(struct pam_response *replies, int count) {
 }
 
 // a lost socket ends the attempt soon enough, so a failed send is ignored
-static void tell(
-	struct conversation *conversation, bool error, const char *text) {
-	char packet[MESSAGE_REPLY_MAX];
-	size_t length =
-		message_text(text, strnlen(text, PAM_MAX_MSG_SIZE), packet + 1);
-	if (length == 0) {
-		return;
-	}
-	if (error) {
-		log_warn("PAM: %.*s", (int)length, packet + 1);
-	} else {
-		log_info("PAM: %.*s", (int)length, packet + 1);
-	}
+static void tell(struct conversation *conversation, char kind, const char *text,
+	size_t length) {
 	if (conversation->texts >= MESSAGE_TEXT_COUNT) {
 		if (conversation->texts == MESSAGE_TEXT_COUNT) {
 			log_warn("PAM sent more than %d messages; not showing "
@@ -58,8 +50,37 @@ static void tell(
 		return;
 	}
 	conversation->texts++;
-	packet[0] = error ? MESSAGE_ERROR : MESSAGE_INFO;
+	char packet[MESSAGE_REPLY_MAX];
+	packet[0] = kind;
+	memcpy(packet + 1, text, length);
 	(void)send(conversation->fd, packet, length + 1, MSG_NOSIGNAL);
+}
+
+static void show(
+	struct conversation *conversation, bool error, const char *text) {
+	char line[MESSAGE_TEXT_MAX];
+	size_t length = utf8_line(
+		text, strnlen(text, PAM_MAX_MSG_SIZE), line, sizeof line);
+	if (length == 0) {
+		return;
+	}
+	if (error) {
+		log_warn("PAM: %.*s", (int)length, line);
+	} else {
+		log_info("PAM: %.*s", (int)length, line);
+	}
+	tell(conversation, error ? MESSAGE_ERROR : MESSAGE_INFO, line, length);
+}
+
+_Static_assert(sizeof SERVICE_MISSING - 1 <= MESSAGE_TEXT_MAX,
+	"the warning fits one text packet");
+
+// before each attempt as well, since the locker clears it when one starts
+static void warn_missing(struct conversation *conversation) {
+	if (conversation->no_service) {
+		tell(conversation, MESSAGE_ERROR, SERVICE_MISSING,
+			sizeof SERVICE_MISSING - 1);
+	}
 }
 
 static bool answer(const struct pam_message *message,
@@ -78,7 +99,7 @@ static bool answer(const struct pam_message *message,
 		return reply->resp != NULL;
 	case PAM_ERROR_MSG:
 	case PAM_TEXT_INFO:
-		tell(conversation, message->msg_style == PAM_ERROR_MSG, text);
+		show(conversation, message->msg_style == PAM_ERROR_MSG, text);
 		return true;
 	default:
 		log_warn("PAM asked for something other than the password; "
@@ -113,9 +134,9 @@ static pam_handle_t *start(const char *user, const struct pam_conv *conv) {
 	log_warn("built for tests: authenticating with the PAM config in %s",
 		SWEETLOCK_TEST_PAM_CONFDIR);
 	int status = pam_start_confdir(
-		"sweetlock", user, conv, SWEETLOCK_TEST_PAM_CONFDIR, &pam);
+		SERVICE_NAME, user, conv, SWEETLOCK_TEST_PAM_CONFDIR, &pam);
 #else
-	int status = pam_start("sweetlock", user, conv, &pam);
+	int status = pam_start(SERVICE_NAME, user, conv, &pam);
 #endif
 	if (status != PAM_SUCCESS) {
 		log_error("failed to start PAM: %s", pam_strerror(pam, status));
@@ -127,6 +148,7 @@ static pam_handle_t *start(const char *user, const struct pam_conv *conv) {
 static bool authenticate(pam_handle_t *pam, struct conversation *conversation) {
 	conversation->answered = false;
 	conversation->texts = 0;
+	warn_missing(conversation);
 	int status = pam_authenticate(pam, 0);
 	if (status != PAM_SUCCESS) {
 		// a wrong password is the usual failure; others point at the
@@ -193,7 +215,15 @@ _Noreturn void helper_run(int fd, pid_t parent, const char *user) {
 		_exit(EXIT_FAILURE);
 	}
 	struct password *password = password_create();
-	struct conversation conversation = {.password = password, .fd = fd};
+	struct conversation conversation = {
+		.password = password,
+		.fd = fd,
+		.no_service = !service_found(),
+	};
+	if (conversation.no_service) {
+		log_error(SERVICE_MISSING_LOG);
+		warn_missing(&conversation);
+	}
 	const struct pam_conv conv = {
 		.conv = converse, .appdata_ptr = &conversation};
 	pam_handle_t *pam = password ? start(user, &conv) : NULL;

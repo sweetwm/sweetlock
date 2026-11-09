@@ -50,6 +50,7 @@ struct app {
 	struct field field;
 	struct worker worker;
 	const struct config *config;
+	const char *notice;
 	struct user user;
 	struct ui_content content;
 	enum ui_stage stage;
@@ -230,6 +231,7 @@ static void start_ui(struct app *app) {
 		.field = &app->field,
 		.worker = &app->worker,
 		.user = &app->user,
+		.notice = app->notice,
 	};
 	display_show_backgrounds(&app->display, &app->content);
 	ui_content_start(&app->content, &app->clock);
@@ -348,8 +350,8 @@ static bool open_signals(struct app *app) {
 	return true;
 }
 
-int app_run(const struct config *config, const struct timespec *start,
-	int locked_fd) {
+int app_run(const struct config *config, const char *notice,
+	const struct timespec *start, int locked_fd) {
 	struct app app = {
 		.auth = {.pid = -1, .fd = -1},
 		.input = {.repeat_fd = -1},
@@ -357,6 +359,7 @@ int app_run(const struct config *config, const struct timespec *start,
 		.field = {.timer_fd = -1},
 		.worker = {.fd = -1},
 		.config = config,
+		.notice = notice,
 		.signal_fd = -1,
 		.locked_fd = locked_fd,
 	};

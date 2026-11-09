@@ -101,7 +101,7 @@ static cairo_status_t read_png(
 	return CAIRO_STATUS_SUCCESS;
 }
 
-static bool fits(uint32_t width, uint32_t height) {
+bool image_fits(uint32_t width, uint32_t height) {
 	return width > 0 && height > 0 && width <= IMAGE_SIDE_MAX &&
 	       height <= IMAGE_SIDE_MAX &&
 	       (uint64_t)width * height <= IMAGE_PIXELS_MAX;
@@ -137,7 +137,7 @@ cairo_surface_t *image_decode(const unsigned char *data, size_t length,
 		snprintf(error, error_size, "not a PNG or JPEG image");
 		return NULL;
 	}
-	if (!fits(width, height)) {
+	if (!image_fits(width, height)) {
 		snprintf(error, error_size,
 			"%" PRIu32 "x%" PRIu32
 			" is past the limit of %d pixels",

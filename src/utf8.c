@@ -1,6 +1,7 @@
 #include "utf8.h"
 
 #include <stdint.h>
+#include <string.h>
 
 static size_t sequence(const unsigned char *text, size_t left) {
 	unsigned char first = text[0];
@@ -42,10 +43,6 @@ static size_t sequence(const unsigned char *text, size_t left) {
 	return length;
 }
 
-size_t utf8_plain_sequence(const char *text, size_t left) {
-	return sequence((const unsigned char *)text, left);
-}
-
 bool utf8_is_plain(const char *text, size_t length) {
 	const unsigned char *bytes = (const unsigned char *)text;
 	size_t i = 0;
@@ -57,4 +54,33 @@ bool utf8_is_plain(const char *text, size_t length) {
 		i += step;
 	}
 	return true;
+}
+
+size_t utf8_line(const char *text, size_t size, char *out, size_t max) {
+	size_t length = 0;
+	size_t i = 0;
+	while (i < size) {
+		size_t step =
+			sequence((const unsigned char *)text + i, size - i);
+		if (step == 0) {
+			// a space is plain, and a leading one is dropped below
+			if (length > 0 && length < max) {
+				out[length++] = ' ';
+			}
+			i++;
+			continue;
+		}
+		if (length + step > max) {
+			break;
+		}
+		if (length > 0 || text[i] != ' ') {
+			memcpy(out + length, text + i, step);
+			length += step;
+		}
+		i += step;
+	}
+	while (length > 0 && out[length - 1] == ' ') {
+		length--;
+	}
+	return length;
 }

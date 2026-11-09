@@ -16,6 +16,7 @@ enum {
 enum args_action {
 	ARGS_RUN,
 	ARGS_PREVIEW,
+	ARGS_CHECK,
 	ARGS_HELP,
 	ARGS_VERSION,
 };

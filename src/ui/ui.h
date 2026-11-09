@@ -41,6 +41,8 @@ struct ui_content {
 	// NULL loads in the foreground, as the preview does
 	struct worker *worker;
 	const struct user *user;
+	// plain text about the setup, shown while PAM has nothing to say
+	const char *notice;
 	struct avatar avatar;
 };
 

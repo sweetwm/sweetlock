@@ -30,32 +30,3 @@ bool message_reply(const char *data, size_t size, struct message_reply *reply) {
 	return (data[0] == MESSAGE_INFO || data[0] == MESSAGE_ERROR) &&
 	       utf8_is_plain(reply->text, reply->length);
 }
-
-size_t message_text(
-	const char *text, size_t size, char out[static MESSAGE_TEXT_MAX]) {
-	size_t length = 0;
-	size_t i = 0;
-	while (i < size) {
-		size_t step = utf8_plain_sequence(text + i, size - i);
-		if (step == 0) {
-			// a space is plain, and a leading one is dropped below
-			if (length > 0 && length < MESSAGE_TEXT_MAX) {
-				out[length++] = ' ';
-			}
-			i++;
-			continue;
-		}
-		if (length + step > MESSAGE_TEXT_MAX) {
-			break;
-		}
-		if (length > 0 || text[i] != ' ') {
-			memcpy(out + length, text + i, step);
-			length += step;
-		}
-		i += step;
-	}
-	while (length > 0 && out[length - 1] == ' ') {
-		length--;
-	}
-	return length;
-}

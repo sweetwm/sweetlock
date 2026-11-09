@@ -28,6 +28,9 @@ enum image_format {
 bool image_jpeg_size(const unsigned char *data, size_t length, uint32_t *width,
 	uint32_t *height);
 
+// within the side and pixel limits every decode checks
+bool image_fits(uint32_t width, uint32_t height);
+
 enum image_format image_probe(const unsigned char *data, size_t length,
 	uint32_t *width, uint32_t *height);
 
