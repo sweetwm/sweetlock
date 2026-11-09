@@ -55,6 +55,7 @@ struct ui {
 	PangoLayout *date;
 	PangoLayout *name;
 	PangoLayout *entry;
+	PangoLayout *status;
 	// the avatar cut to its circle at this scale, made on first use
 	cairo_surface_t *avatar;
 	// a bullet per code point, three bytes each

@@ -14,12 +14,13 @@
 #include "input/password.h"
 #include "log.h"
 
-enum { PAM_TEXT_LOG_MAX = 256 };
-
 struct conversation {
 	struct password *password;
+	int fd;
 	// a later hidden prompt asks for something else, such as an OTP code
 	bool answered;
+	// texts sent in this attempt
+	int texts;
 };
 
 static void free_replies(struct pam_response *replies, int count) {
@@ -31,6 +32,34 @@ static void free_replies(struct pam_response *replies, int count) {
 		}
 	}
 	free(replies);
+}
+
+// a lost socket ends the attempt soon enough, so a failed send is ignored
+static void tell(
+	struct conversation *conversation, bool error, const char *text) {
+	char packet[MESSAGE_REPLY_MAX];
+	size_t length =
+		message_text(text, strnlen(text, PAM_MAX_MSG_SIZE), packet + 1);
+	if (length == 0) {
+		return;
+	}
+	if (error) {
+		log_warn("PAM: %.*s", (int)length, packet + 1);
+	} else {
+		log_info("PAM: %.*s", (int)length, packet + 1);
+	}
+	if (conversation->texts >= MESSAGE_TEXT_COUNT) {
+		if (conversation->texts == MESSAGE_TEXT_COUNT) {
+			log_warn("PAM sent more than %d messages; not showing "
+				 "the rest",
+				MESSAGE_TEXT_COUNT);
+			conversation->texts++;
+		}
+		return;
+	}
+	conversation->texts++;
+	packet[0] = error ? MESSAGE_ERROR : MESSAGE_INFO;
+	(void)send(conversation->fd, packet, length + 1, MSG_NOSIGNAL);
 }
 
 static bool answer(const struct pam_message *message,
@@ -48,10 +77,8 @@ static bool answer(const struct pam_message *message,
 		reply->resp = strdup(conversation->password->bytes);
 		return reply->resp != NULL;
 	case PAM_ERROR_MSG:
-		log_warn("PAM: %.*s", PAM_TEXT_LOG_MAX, text);
-		return true;
 	case PAM_TEXT_INFO:
-		log_info("PAM: %.*s", PAM_TEXT_LOG_MAX, text);
+		tell(conversation, message->msg_style == PAM_ERROR_MSG, text);
 		return true;
 	default:
 		log_warn("PAM asked for something other than the password; "
@@ -99,6 +126,7 @@ static pam_handle_t *start(const char *user, const struct pam_conv *conv) {
 
 static bool authenticate(pam_handle_t *pam, struct conversation *conversation) {
 	conversation->answered = false;
+	conversation->texts = 0;
 	int status = pam_authenticate(pam, 0);
 	if (status != PAM_SUCCESS) {
 		// a wrong password is the usual failure; others point at the
@@ -165,7 +193,7 @@ _Noreturn void helper_run(int fd, pid_t parent, const char *user) {
 		_exit(EXIT_FAILURE);
 	}
 	struct password *password = password_create();
-	struct conversation conversation = {.password = password};
+	struct conversation conversation = {.password = password, .fd = fd};
 	const struct pam_conv conv = {
 		.conv = converse, .appdata_ptr = &conversation};
 	pam_handle_t *pam = password ? start(user, &conv) : NULL;

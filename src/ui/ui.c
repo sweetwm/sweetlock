@@ -37,10 +37,12 @@ static const struct {
 	int32_t field_padding;
 	int32_t eye_inset;
 	int32_t eye_hit;
+	int32_t status_centre;
 	double time_size;
 	double date_size;
 	double name_size;
 	double entry_size;
+	double status_size;
 	double outline;
 } theme = {
 	.width = 560,
@@ -49,7 +51,7 @@ static const struct {
 	.time_centre = 56,
 	.date_centre = 118,
 	.login_above = 200,
-	.login_height = 320,
+	.login_height = 352,
 	.avatar_top = 5,
 	.avatar_size = 150,
 	.name_centre = 200,
@@ -61,10 +63,12 @@ static const struct {
 	.field_padding = 18,
 	.eye_inset = 28,
 	.eye_hit = 56,
+	.status_centre = 334,
 	.time_size = 88,
 	.date_size = 18,
 	.name_size = 28,
 	.entry_size = 17,
+	.status_size = 15,
 	.outline = 1.5,
 };
 
@@ -152,6 +156,9 @@ static void set_fonts(struct ui *ui) {
 		theme.name_width * s);
 	text_set_font(ui->entry, font, PANGO_WEIGHT_NORMAL,
 		theme.entry_size * s, entry_width(config) * s);
+	// PAM's lines run longer than the field
+	text_set_font(ui->status, font, PANGO_WEIGHT_NORMAL,
+		theme.status_size * s, theme.width * s);
 }
 
 struct ui *ui_create(const struct ui_content *content, uint32_t scale) {
@@ -167,8 +174,9 @@ struct ui *ui_create(const struct ui_content *content, uint32_t scale) {
 		.date = text_layout_create(),
 		.name = text_layout_create(),
 		.entry = text_layout_create(),
+		.status = text_layout_create(),
 	};
-	if (!ui->time || !ui->date || !ui->name || !ui->entry) {
+	if (!ui->time || !ui->date || !ui->name || !ui->entry || !ui->status) {
 		log_error("failed to create the UI's text layouts");
 		ui_destroy(ui);
 		return NULL;
@@ -363,6 +371,19 @@ static void draw_field(struct ui *ui, cairo_t *cr, const struct ui_rect *part) {
 	}
 }
 
+// PAM's text is plain text from the helper, never markup
+static void draw_status(struct ui *ui, cairo_t *cr, int32_t width) {
+	const struct config *config = ui->content->config;
+	const struct auth *auth = ui->content->auth;
+	if (auth->notice == AUTH_NOTICE_NONE) {
+		return;
+	}
+	set_source(cr, auth->notice == AUTH_NOTICE_ERROR ? config->theme.error
+							 : config->theme.muted);
+	text_set(ui->status, auth->notice_text);
+	draw_line(ui, cr, ui->status, width, theme.status_centre);
+}
+
 static bool draw_login(
 	struct ui *ui, cairo_t *cr, const struct ui_rect *rect, int32_t width) {
 	const struct config *config = ui->content->config;
@@ -374,6 +395,7 @@ static bool draw_login(
 		draw_line(ui, cr, ui->name, width, theme.name_centre);
 	}
 	draw_field(ui, cr, rect);
+	draw_status(ui, cr, width);
 	return true;
 }
 
@@ -408,7 +430,8 @@ void ui_destroy(struct ui *ui) {
 	if (!ui) {
 		return;
 	}
-	PangoLayout *layouts[] = {ui->time, ui->date, ui->name, ui->entry};
+	PangoLayout *layouts[] = {
+		ui->time, ui->date, ui->name, ui->entry, ui->status};
 	for (size_t i = 0; i < sizeof layouts / sizeof layouts[0]; i++) {
 		if (layouts[i]) {
 			g_object_unref(layouts[i]);
