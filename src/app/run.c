@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <wayland-client.h>
 
+#include "app/screen.h"
 #include "app/worker.h"
 #include "auth/auth.h"
 #include "input/input.h"
@@ -23,6 +24,7 @@
 #include "ui/user.h"
 #include "wayland/backdrop.h"
 #include "wayland/display.h"
+#include "wayland/power.h"
 
 enum {
 	FD_WAYLAND,
@@ -33,6 +35,7 @@ enum {
 	FD_CLOCK,
 	FD_FIELD,
 	FD_WORKER,
+	FD_SCREEN,
 	FD_COUNT,
 };
 
@@ -50,6 +53,7 @@ struct app {
 	struct clock clock;
 	struct field field;
 	struct worker worker;
+	struct screen screen;
 	const struct config *config;
 	const char *notice;
 	struct user user;
@@ -132,6 +136,7 @@ static bool handle_auth(struct app *app) {
 	if (result == AUTH_SUCCESS) {
 		lock_unlock(&app->display.lock);
 	} else if (result == AUTH_FAILURE) {
+		input_touch(&app->input);
 		field_fail(&app->field);
 		display_mark_dirty(&app->display, UI_LOGIN);
 	} else if (result == AUTH_NOTICE) {
@@ -193,6 +198,10 @@ static bool handle_fds(struct app *app, const struct pollfd *fds) {
 	if (fds[FD_WORKER].revents & POLLIN) {
 		collect(app);
 	}
+	if (fds[FD_SCREEN].revents & POLLIN) {
+		screen_expire(&app->screen, &app->display, &app->input,
+			app->auth.busy);
+	}
 	return true;
 }
 
@@ -204,11 +213,12 @@ static bool stopping(const struct app *app) {
 }
 
 // a queued unlock wins over any failure, and ends only after the
-// compositor has processed it
+// compositor has processed it; dark outputs come on in the same flush
 static int stop(struct display *display) {
 	if (display->lock.state != LOCK_UNLOCKING) {
 		return EXIT_FAILURE;
 	}
+	power_set(display, true);
 	if (wl_display_roundtrip(display->wl) < 0) {
 		display_log_lost(display);
 		return EXIT_FAILURE;
@@ -241,6 +251,7 @@ static void start_ui(struct app *app) {
 	};
 	display_show_backgrounds(&app->display, &app->content);
 	ui_content_start(&app->content, &app->clock);
+	screen_start(&app->screen, &app->display, &app->input);
 	app->stage = STAGE_STARTED;
 }
 
@@ -252,6 +263,10 @@ static void render(struct app *app) {
 	}
 	if (app->stage == STAGE_WAITING) {
 		start_ui(app);
+	}
+	if (app->input.wake) {
+		app->input.wake = false;
+		screen_wake(&app->screen, display);
 	}
 	if (app->input.changed) {
 		app->input.changed = false;
@@ -297,6 +312,7 @@ static int run(struct app *app) {
 		[FD_CLOCK] = {.events = POLLIN},
 		[FD_FIELD] = {.fd = app->field.timer_fd, .events = POLLIN},
 		[FD_WORKER] = {.events = POLLIN},
+		[FD_SCREEN] = {.fd = app->screen.fd, .events = POLLIN},
 	};
 
 	for (;;) {
@@ -367,6 +383,7 @@ int app_run(const struct config *config, const char *notice,
 		.clock = {.fd = -1},
 		.field = {.timer_fd = -1},
 		.worker = {.fd = -1},
+		.screen = {.fd = -1},
 		.config = config,
 		.notice = notice,
 		.signal_fd = -1,
@@ -377,6 +394,7 @@ int app_run(const struct config *config, const char *notice,
 	user_lookup(&app.user, config->username.text);
 	if (auth_start(&app.auth, app.user.login) && open_signals(&app) &&
 		field_init(&app.field) && input_init(&app.input, &app.auth) &&
+		screen_init(&app.screen, config->screen_off.timeout) &&
 		display_connect(&app.display, config, &app.input) &&
 		display_lock(&app.display, start)) {
 		wl_display_flush(app.display.wl);
@@ -389,6 +407,7 @@ int app_run(const struct config *config, const char *notice,
 	ui_content_finish(&app.content);
 	clock_stop(&app.clock);
 	field_finish(&app.field);
+	screen_finish(&app.screen);
 	input_finish(&app.input);
 	if (app.signal_fd >= 0) {
 		close(app.signal_fd);

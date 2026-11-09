@@ -65,6 +65,7 @@ static void pointer_motion(void *data, struct wl_pointer *wl, uint32_t time,
 	(void)wl;
 	(void)time;
 	struct pointer *pointer = data;
+	input_touch(pointer->display->input);
 	pointer->x = wl_fixed_to_double(x);
 	pointer->y = wl_fixed_to_double(y);
 	bool over = over_eye(pointer);
@@ -79,16 +80,19 @@ static void pointer_button(void *data, struct wl_pointer *wl, uint32_t serial,
 	(void)serial;
 	(void)time;
 	struct pointer *pointer = data;
-	if (button == BTN_LEFT && state == WL_POINTER_BUTTON_STATE_PRESSED &&
-		over_eye(pointer)) {
-		input_toggle_reveal(pointer->display->input);
+	struct input *input = pointer->display->input;
+	if (state != WL_POINTER_BUTTON_STATE_PRESSED) {
+		return;
+	}
+	if (!input_wakes(input) && button == BTN_LEFT && over_eye(pointer)) {
+		input_toggle_reveal(input);
 	}
 }
 
 static void pointer_axis(void *data, struct wl_pointer *wl, uint32_t time,
 	uint32_t axis, wl_fixed_t value) {
-	(void)data;
 	(void)wl;
+	input_touch(((struct pointer *)data)->display->input);
 	(void)time;
 	(void)axis;
 	(void)value;

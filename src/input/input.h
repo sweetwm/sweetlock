@@ -28,6 +28,10 @@ struct input {
 	bool revealed;
 	struct input_status status;
 	bool changed;
+	int64_t active_ns;
+	// the display keeps this current from the outputs' power modes
+	bool screens_off;
+	bool wake;
 	int repeat_fd;
 	struct keyboard *repeat_keyboard;
 	uint32_t repeat_key;
@@ -47,6 +51,15 @@ void input_forget(struct input *input, const struct keyboard *keyboard);
 
 // the repeat timer is readable
 void input_repeat(struct input *input);
+
+// pointer motion, a scroll or a button
+void input_touch(struct input *input);
+
+// true when the press only asks for the screens back on
+bool input_wakes(struct input *input);
+
+// wipes the password and hides it, as the screens go off
+void input_clear(struct input *input);
 
 // a key press or a modifier change on a keyboard with this state
 void input_status(struct input *input, struct xkb_state *state);

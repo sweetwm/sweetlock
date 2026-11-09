@@ -22,6 +22,10 @@ struct display {
 	struct wp_fractional_scale_manager_v1 *fractional_scale;
 	struct wp_cursor_shape_manager_v1 *cursor_shape;
 	struct ext_session_lock_manager_v1 *lock_manager;
+	struct zwlr_output_power_manager_v1 *power_manager;
+	// bound only when the config turns screens off
+	bool power_wanted;
+	bool power_started;
 	struct wl_buffer *solid;
 	struct lock lock;
 	struct wl_list outputs;
