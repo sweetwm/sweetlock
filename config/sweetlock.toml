@@ -94,9 +94,14 @@ text = ""
 [input]
 # Shown in the empty password field
 placeholder = "Password"
-# The eye in the field that shows the typed text; clicking it is the only
-# use of the pointer
+# The eye in the field that shows the typed text
 reveal_toggle = true
+
+[screen_off]
+# Seconds without input on the lock screen before every output powers off,
+# up to 3600, for example 60; 0 never. A key or click powers them back on
+# and is not typed. Turning them off wipes a half-typed password.
+timeout = 0
 
 [theme]
 # A fontconfig family, or a comma-separated list of them

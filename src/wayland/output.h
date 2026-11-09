@@ -26,6 +26,9 @@ struct output {
 	struct wp_viewport *viewport;
 	struct wp_fractional_scale_v1 *fractional;
 	struct ext_session_lock_surface_v1 *lock_surface;
+	struct zwlr_output_power_v1 *power;
+	// its last power mode, ours or the compositor's
+	bool power_off;
 	bool mapped;
 	int32_t width;
 	int32_t height;

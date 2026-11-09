@@ -7,6 +7,8 @@ protocols = [
 	wl_protocol_dir / 'staging' / 'cursor-shape' / 'cursor-shape-v1.xml',
 	# cursor-shape-v1 names zwp_tablet_tool_v2; every release ships this copy
 	wl_protocol_dir / 'unstable' / 'tablet' / 'tablet-unstable-v2.xml',
+	# from wlr-protocols, which few distributions package
+	meson.current_source_dir() / 'wlr-output-power-management-unstable-v1.xml',
 ]
 
 protocol_src = []

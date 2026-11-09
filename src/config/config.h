@@ -104,6 +104,10 @@ struct config {
 		bool reveal_toggle;
 	} input;
 	struct {
+		// seconds without input before the outputs power off; 0 never
+		int32_t timeout;
+	} screen_off;
+	struct {
 		char font[CONFIG_STRING_SIZE];
 		struct color foreground;
 		struct color muted;

@@ -204,7 +204,32 @@ static bool edits(enum key_action action) {
 	       action == KEY_CLEAR;
 }
 
+void input_touch(struct input *input) {
+	struct timespec now = {0};
+	clock_gettime(CLOCK_MONOTONIC, &now);
+	input->active_ns = (int64_t)now.tv_sec * 1000000000 + now.tv_nsec;
+}
+
+// the user sees the field before anything they press reaches it
+bool input_wakes(struct input *input) {
+	input_touch(input);
+	if (input->screens_off) {
+		input->wake = true;
+	}
+	return input->screens_off;
+}
+
+void input_clear(struct input *input) {
+	stop_repeat(input);
+	input->changed |= input->password->length > 0 || input->revealed;
+	password_clear(input->password);
+	input->revealed = false;
+}
+
 void input_press(struct input *input, struct keyboard *keyboard, uint32_t key) {
+	if (input_wakes(input)) {
+		return;
+	}
 	if (input->auth->busy) {
 		if (keyboard_is_escape(keyboard, key) &&
 			auth_cancel(input->auth)) {

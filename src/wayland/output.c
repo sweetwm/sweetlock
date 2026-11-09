@@ -13,6 +13,7 @@
 #include "wayland/buffer.h"
 #include "wayland/display.h"
 #include "wayland/panel.h"
+#include "wayland/power.h"
 #include "wayland/scale.h"
 
 static uint32_t effective_scale(const struct output *output) {
@@ -339,7 +340,11 @@ static bool render(
 	return committed;
 }
 
+// a dark output commits nothing; what changed meanwhile is drawn on wake
 bool output_render(struct output *output, const struct ui_content *content) {
+	if (output->power_off) {
+		return false;
+	}
 	output_show_background(output, content);
 	if (!output->mapped || output->ui_failed) {
 		return false;
@@ -390,6 +395,7 @@ void output_destroy(struct output *output) {
 	}
 	backdrop_put(output->backdrop);
 	backdrop_put(output->shown);
+	power_detach(output);
 	release(output->wl);
 	free(output);
 }

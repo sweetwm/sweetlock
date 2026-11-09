@@ -13,7 +13,9 @@
 #include "wayland/backdrop.h"
 #include "wayland/buffer.h"
 #include "wayland/output.h"
+#include "wayland/power.h"
 #include "wayland/seat.h"
+#include "wlr-output-power-management-unstable-v1-client-protocol.h"
 
 // highest versions whose requests and events this code handles
 enum {
@@ -26,6 +28,7 @@ enum {
 	FRACTIONAL_SCALE_VERSION = 1,
 	CURSOR_SHAPE_VERSION = 1,
 	LOCK_MANAGER_VERSION = 1,
+	POWER_MANAGER_VERSION = 1,
 };
 
 static void *bind(struct wl_registry *registry, uint32_t name,
@@ -51,6 +54,7 @@ static void add_output(
 	if (display->lock.wl && !output_lock(output)) {
 		display->failed = true;
 	}
+	power_attach(output);
 }
 
 static void add_seat(struct display *display, uint32_t name, uint32_t version) {
@@ -104,6 +108,11 @@ static void registry_global(void *data, struct wl_registry *registry,
 		display->lock_manager = bind(registry, name,
 			&ext_session_lock_manager_v1_interface, version,
 			LOCK_MANAGER_VERSION);
+	} else if (display->power_wanted && !display->power_manager &&
+		   is(interface, &zwlr_output_power_manager_v1_interface)) {
+		display->power_manager = bind(registry, name,
+			&zwlr_output_power_manager_v1_interface, version,
+			POWER_MANAGER_VERSION);
 	} else if (is(interface, &wl_output_interface)) {
 		add_output(display, name, version);
 	} else if (is(interface, &wl_seat_interface)) {
@@ -121,6 +130,7 @@ static void registry_global_remove(
 			log_info("removed output %s", output->name);
 			wl_list_remove(&output->link);
 			output_destroy(output);
+			power_update(display);
 			return;
 		}
 	}
@@ -160,7 +170,10 @@ static const char *missing_global(const struct display *display) {
 
 bool display_connect(struct display *display, const struct config *config,
 	struct input *input) {
-	*display = (struct display){.input = input};
+	*display = (struct display){
+		.input = input,
+		.power_wanted = config->screen_off.timeout > 0,
+	};
 	wl_list_init(&display->outputs);
 	wl_list_init(&display->seats);
 	wl_list_init(&display->backdrops);
@@ -290,6 +303,9 @@ void display_disconnect(struct display *display) {
 	}
 	if (display->solid) {
 		wl_buffer_destroy(display->solid);
+	}
+	if (display->power_manager) {
+		zwlr_output_power_manager_v1_destroy(display->power_manager);
 	}
 	if (display->lock_manager) {
 		ext_session_lock_manager_v1_destroy(display->lock_manager);
