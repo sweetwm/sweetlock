@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <signal.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -54,26 +55,58 @@ bool auth_submit(struct auth *auth, const struct password *password) {
 		return false;
 	}
 	auth->busy = true;
+	auth->notice = AUTH_NOTICE_NONE;
+	auth->notice_text[0] = '\0';
 	return true;
 }
 
+static void keep_notice(struct auth *auth, const struct message_reply *reply) {
+	auth->notice = reply->kind == MESSAGE_KIND_INFO ? AUTH_NOTICE_INFO
+							: AUTH_NOTICE_ERROR;
+	memcpy(auth->notice_text, reply->text, reply->length);
+	auth->notice_text[reply->length] = '\0';
+}
+
+// a verdict counts only as the answer to a password that is out, so a stray
+// one can never unlock
 enum auth_result auth_read(struct auth *auth) {
-	char reply[MESSAGE_REPLY_SIZE];
-	ssize_t size = recv(auth->fd, reply, sizeof reply, MSG_TRUNC);
-	if (size < 0 && (errno == EAGAIN || errno == EINTR)) {
-		return AUTH_PENDING;
+	enum auth_result result = AUTH_PENDING;
+	for (;;) {
+		char packet[MESSAGE_REPLY_MAX];
+		ssize_t size = recv(auth->fd, packet, sizeof packet, MSG_TRUNC);
+		if (size < 0 && errno == EINTR) {
+			continue;
+		}
+		if (size < 0 && errno == EAGAIN) {
+			return result;
+		}
+		if (size <= 0) {
+			log_error("the PAM helper exited; exiting without "
+				  "unlocking");
+			return AUTH_LOST;
+		}
+		if (!auth->busy) {
+			log_error("the PAM helper replied with no password "
+				  "out; ignoring it");
+			continue;
+		}
+		// a broken reply still ends the attempt, or keys would stay
+		// ignored
+		struct message_reply reply;
+		bool valid = message_reply(packet, (size_t)size, &reply);
+		if (!valid) {
+			log_error("the PAM helper sent a malformed reply");
+		} else if (reply.kind == MESSAGE_KIND_INFO ||
+			   reply.kind == MESSAGE_KIND_ERROR) {
+			keep_notice(auth, &reply);
+			result = AUTH_NOTICE;
+			continue;
+		}
+		auth->busy = false;
+		bool success = valid && reply.kind == MESSAGE_KIND_SUCCESS;
+		log_info("authentication %s", success ? "succeeded" : "failed");
+		return success ? AUTH_SUCCESS : AUTH_FAILURE;
 	}
-	if (size <= 0) {
-		log_error("the PAM helper exited; exiting without unlocking");
-		return AUTH_LOST;
-	}
-	auth->busy = false;
-	bool success = false;
-	if (!message_reply(reply, (size_t)size, &success)) {
-		log_error("the PAM helper sent a malformed reply");
-	}
-	log_info("authentication %s", success ? "succeeded" : "failed");
-	return success ? AUTH_SUCCESS : AUTH_FAILURE;
 }
 
 void auth_stop(struct auth *auth) {

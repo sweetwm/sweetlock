@@ -27,6 +27,9 @@ enum preview_field {
 	PREVIEW_REVEALED,
 	PREVIEW_CHECKING,
 	PREVIEW_FAILED,
+	// checking with a PAM info line, failed with a PAM error line
+	PREVIEW_INFO,
+	PREVIEW_ERROR,
 };
 
 struct preview {

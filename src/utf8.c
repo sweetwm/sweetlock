@@ -2,7 +2,6 @@
 
 #include <stdint.h>
 
-// the length of the sequence starting at text, 0 when it is not valid
 static size_t sequence(const unsigned char *text, size_t left) {
 	unsigned char first = text[0];
 	if (first < 0x80) {
@@ -41,6 +40,10 @@ static size_t sequence(const unsigned char *text, size_t left) {
 		return 0;
 	}
 	return length;
+}
+
+size_t utf8_plain_sequence(const char *text, size_t left) {
+	return sequence((const unsigned char *)text, left);
 }
 
 bool utf8_is_plain(const char *text, size_t length) {

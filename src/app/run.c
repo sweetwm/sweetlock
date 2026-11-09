@@ -132,6 +132,8 @@ static bool handle_auth(struct app *app) {
 	} else if (result == AUTH_FAILURE) {
 		field_fail(&app->field);
 		display_mark_dirty(&app->display, UI_LOGIN);
+	} else if (result == AUTH_NOTICE) {
+		display_mark_dirty(&app->display, UI_LOGIN);
 	}
 	return result != AUTH_LOST;
 }

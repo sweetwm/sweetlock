@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 
 #include "app/app.h"
 #include "auth/auth.h"
@@ -90,6 +91,21 @@ static int write_png(
 	return EXIT_SUCCESS;
 }
 
+// sample lines as pam_fprintd and pam_faillock word them
+static void show_notice(struct auth *auth, enum preview_field state) {
+	static const char info[] =
+		"Place your finger on the fingerprint reader";
+	static const char error[] = "The account is locked due to 3 failed "
+				    "logins. (5 minutes left to unlock)";
+	if (state == PREVIEW_INFO) {
+		auth->notice = AUTH_NOTICE_INFO;
+		memcpy(auth->notice_text, info, sizeof info);
+	} else if (state == PREVIEW_ERROR) {
+		auth->notice = AUTH_NOTICE_ERROR;
+		memcpy(auth->notice_text, error, sizeof error);
+	}
+}
+
 int app_preview(const struct config *config, const struct preview *preview) {
 	static const char sample[] = "sweetlock";
 	enum preview_field state = preview->field;
@@ -106,9 +122,15 @@ int app_preview(const struct config *config, const struct preview *preview) {
 		.revealed = state == PREVIEW_REVEALED,
 	};
 	struct auth auth = {
-		.pid = -1, .fd = -1, .busy = state == PREVIEW_CHECKING};
+		.pid = -1,
+		.fd = -1,
+		.busy = state == PREVIEW_CHECKING || state == PREVIEW_INFO,
+	};
 	struct field field = {
-		.timer_fd = -1, .failed = state == PREVIEW_FAILED};
+		.timer_fd = -1,
+		.failed = state == PREVIEW_FAILED || state == PREVIEW_ERROR,
+	};
+	show_notice(&auth, state);
 	struct clock clock = {.fd = -1};
 	struct user user;
 	user_lookup(&user, config->username.text);
