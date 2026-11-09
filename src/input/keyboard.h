@@ -5,18 +5,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "input/key.h"
+
 struct input;
 struct wl_keyboard;
-
-enum key_action {
-	KEY_NONE,
-	KEY_TEXT,
-	KEY_BACKSPACE,
-	KEY_CLEAR,
-	KEY_SUBMIT,
-};
-
-enum { KEY_TEXT_SIZE = 64 };
 
 // one wl_keyboard with its keymap and xkb state
 struct keyboard;
@@ -26,7 +18,7 @@ struct keyboard *keyboard_create(struct input *input, struct wl_keyboard *wl);
 
 void keyboard_destroy(struct keyboard *keyboard);
 
-// fills text only for KEY_TEXT; the caller wipes it
+// key_translate with this keyboard's state; key is an evdev code
 enum key_action keyboard_translate(
 	struct keyboard *keyboard, uint32_t key, char *text, size_t size);
 

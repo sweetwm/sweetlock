@@ -7,6 +7,7 @@
 struct auth;
 struct keyboard;
 struct password;
+struct xkb_compose_table;
 struct xkb_context;
 
 // what every keyboard and pointer shares: the password, the attempt, key
@@ -14,6 +15,9 @@ struct xkb_context;
 struct input {
 	struct auth *auth;
 	struct xkb_context *xkb;
+	// read on the first key press; NULL when the locale has none
+	struct xkb_compose_table *compose;
+	bool compose_loaded;
 	struct password *password;
 	// the field shows the text instead of dots
 	bool revealed;
