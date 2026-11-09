@@ -121,7 +121,12 @@ int app_preview(const struct config *config, const char *notice,
 		.password = password,
 		.repeat_fd = -1,
 		.revealed = state == PREVIEW_REVEALED,
+		.status = {.caps_lock = state == PREVIEW_CAPS},
 	};
+	if (state == PREVIEW_LAYOUT) {
+		static const char layout[] = "Latvian (apostrophe)";
+		memcpy(input.status.layout, layout, sizeof layout);
+	}
 	struct auth auth = {
 		.pid = -1,
 		.fd = -1,

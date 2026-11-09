@@ -106,6 +106,7 @@ executable(
 	'src/ui/avatar.c',
 	'src/ui/clock.c',
 	'src/ui/field.c',
+	'src/ui/status.c',
 	'src/ui/ui.c',
 	'src/ui/user.c',
 	'src/utf8.c',

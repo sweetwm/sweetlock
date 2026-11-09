@@ -31,6 +31,9 @@ enum preview_field {
 	// checking with a PAM info line, failed with a PAM error line
 	PREVIEW_INFO,
 	PREVIEW_ERROR,
+	// idle with the Caps Lock warning, idle with a second layout active
+	PREVIEW_CAPS,
+	PREVIEW_LAYOUT,
 };
 
 struct preview {

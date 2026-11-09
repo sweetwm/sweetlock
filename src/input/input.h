@@ -9,22 +9,26 @@ struct keyboard;
 struct password;
 struct xkb_compose_table;
 struct xkb_context;
+struct xkb_state;
 
-// what every keyboard and pointer shares: the password, the attempt, key
-// repeat and the reveal toggle
+// the longest xkeyboard-config description is about 60 bytes
+enum { INPUT_LAYOUT_SIZE = 128 };
+
+struct input_status {
+	bool caps_lock;
+	char layout[INPUT_LAYOUT_SIZE];
+};
+
 struct input {
 	struct auth *auth;
 	struct xkb_context *xkb;
-	// read on the first key press; NULL when the locale has none
 	struct xkb_compose_table *compose;
 	bool compose_loaded;
 	struct password *password;
-	// the field shows the text instead of dots
 	bool revealed;
-	// something the field shows changed; the loop clears it
+	struct input_status status;
 	bool changed;
 	int repeat_fd;
-	// the held key that repeats, if any
 	struct keyboard *repeat_keyboard;
 	uint32_t repeat_key;
 };
@@ -43,6 +47,9 @@ void input_forget(struct input *input, const struct keyboard *keyboard);
 
 // the repeat timer is readable
 void input_repeat(struct input *input);
+
+// a key press or a modifier change on a keyboard with this state
+void input_status(struct input *input, struct xkb_state *state);
 
 void input_toggle_reveal(struct input *input);
 
