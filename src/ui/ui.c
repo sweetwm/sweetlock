@@ -5,16 +5,16 @@
 #include <string.h>
 
 #include "auth/auth.h"
-#include "config.h"
+#include "config/config.h"
 #include "input/input.h"
 #include "input/password.h"
 #include "log.h"
 #include "render/icon.h"
 #include "render/text.h"
-#include "scale.h"
 #include "ui/clock.h"
 #include "ui/field.h"
 #include "ui/user.h"
+#include "wayland/scale.h"
 
 // logical pixels, placed like default.png; login offsets are from the top
 // of the login part

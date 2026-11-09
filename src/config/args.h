@@ -1,11 +1,11 @@
-#ifndef SWEETLOCK_ARGS_H
-#define SWEETLOCK_ARGS_H
+#ifndef SWEETLOCK_CONFIG_ARGS_H
+#define SWEETLOCK_CONFIG_ARGS_H
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
-#include "config.h"
+#include "config/config.h"
 
 enum {
 	ARGS_OVERRIDE_MAX = 32,

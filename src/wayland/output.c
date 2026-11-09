@@ -4,16 +4,16 @@
 #include <stdlib.h>
 #include <wayland-client.h>
 
-#include "config.h"
+#include "config/config.h"
 #include "ext-session-lock-v1-client-protocol.h"
 #include "fractional-scale-v1-client-protocol.h"
 #include "log.h"
-#include "scale.h"
 #include "viewporter-client-protocol.h"
 #include "wayland/backdrop.h"
 #include "wayland/buffer.h"
 #include "wayland/display.h"
 #include "wayland/panel.h"
+#include "wayland/scale.h"
 
 static uint32_t effective_scale(const struct output *output) {
 	if (output->fractional_scale) {

@@ -1,5 +1,5 @@
-#ifndef SWEETLOCK_PATH_H
-#define SWEETLOCK_PATH_H
+#ifndef SWEETLOCK_FS_PATH_H
+#define SWEETLOCK_FS_PATH_H
 
 #include <limits.h>
 #include <stdbool.h>

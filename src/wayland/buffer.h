@@ -6,7 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "config.h"
+#include "config/config.h"
 
 struct wl_shm;
 

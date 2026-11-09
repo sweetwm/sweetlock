@@ -1,11 +1,11 @@
-#include "image.h"
+#include "image/image.h"
 
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "jpeg.h"
+#include "image/jpeg.h"
 
 enum {
 	PNG_SIGNATURE_SIZE = 8,

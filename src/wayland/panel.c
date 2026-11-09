@@ -4,10 +4,10 @@
 #include <wayland-client.h>
 
 #include "log.h"
-#include "scale.h"
 #include "viewporter-client-protocol.h"
 #include "wayland/buffer.h"
 #include "wayland/display.h"
+#include "wayland/scale.h"
 
 struct panel *panel_create(
 	struct display *display, struct wl_surface *parent, enum ui_part part) {

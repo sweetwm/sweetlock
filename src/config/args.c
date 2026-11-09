@@ -1,11 +1,11 @@
-#include "args.h"
+#include "config/args.h"
 
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "log.h"
-#include "scale.h"
+#include "wayland/scale.h"
 
 const char args_usage[] =
 	"Sweetlock - a screen locker for Wayland\n"

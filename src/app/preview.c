@@ -1,17 +1,17 @@
 #include <stdlib.h>
 
-#include "app.h"
+#include "app/app.h"
 #include "auth/auth.h"
 #include "background/draw.h"
 #include "background/job.h"
 #include "input/input.h"
 #include "input/password.h"
 #include "log.h"
-#include "scale.h"
 #include "ui/clock.h"
 #include "ui/field.h"
 #include "ui/ui.h"
 #include "ui/user.h"
+#include "wayland/scale.h"
 
 static bool draw_part(struct ui *ui, enum ui_part part, cairo_t *cr,
 	int32_t width, int32_t height) {

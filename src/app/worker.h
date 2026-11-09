@@ -1,5 +1,5 @@
-#ifndef SWEETLOCK_WORKER_H
-#define SWEETLOCK_WORKER_H
+#ifndef SWEETLOCK_APP_WORKER_H
+#define SWEETLOCK_APP_WORKER_H
 
 #include <pthread.h>
 #include <stdbool.h>

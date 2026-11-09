@@ -5,7 +5,7 @@
 #include <time.h>
 #include <wayland-util.h>
 
-#include "config.h"
+#include "config/config.h"
 #include "ui/ui.h"
 #include "wayland/lock.h"
 

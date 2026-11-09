@@ -1,4 +1,4 @@
-#include "scale.h"
+#include "wayland/scale.h"
 
 #include <assert.h>
 

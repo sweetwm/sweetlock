@@ -1,5 +1,5 @@
-#ifndef SWEETLOCK_CONFIG_H
-#define SWEETLOCK_CONFIG_H
+#ifndef SWEETLOCK_CONFIG_CONFIG_H
+#define SWEETLOCK_CONFIG_CONFIG_H
 
 #include <stdbool.h>
 #include <stddef.h>

@@ -1,4 +1,4 @@
-#include "app.h"
+#include "app/app.h"
 
 #include <errno.h>
 #include <malloc.h>
@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <wayland-client.h>
 
+#include "app/worker.h"
 #include "auth/auth.h"
 #include "input/input.h"
 #include "input/password.h"
@@ -22,7 +23,6 @@
 #include "ui/user.h"
 #include "wayland/backdrop.h"
 #include "wayland/display.h"
-#include "worker.h"
 
 enum {
 	FD_WAYLAND,

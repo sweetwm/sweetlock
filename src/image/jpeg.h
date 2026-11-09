@@ -1,5 +1,5 @@
-#ifndef SWEETLOCK_JPEG_H
-#define SWEETLOCK_JPEG_H
+#ifndef SWEETLOCK_IMAGE_JPEG_H
+#define SWEETLOCK_IMAGE_JPEG_H
 
 #include <cairo.h>
 #include <stddef.h>

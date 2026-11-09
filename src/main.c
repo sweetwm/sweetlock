@@ -5,9 +5,9 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "app.h"
-#include "args.h"
-#include "config.h"
+#include "app/app.h"
+#include "config/args.h"
+#include "config/config.h"
 #include "log.h"
 
 // a closed stdio number goes to the next socket we open, and the log with it

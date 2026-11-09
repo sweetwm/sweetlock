@@ -2,10 +2,10 @@
 
 #include <stdlib.h>
 
+#include "app/worker.h"
 #include "log.h"
 #include "wayland/buffer.h"
 #include "wayland/display.h"
-#include "worker.h"
 
 struct backdrop *backdrop_get(struct display *display,
 	const struct config *config, struct worker *worker, int32_t width,

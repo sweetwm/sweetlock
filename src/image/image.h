@@ -1,12 +1,12 @@
-#ifndef SWEETLOCK_IMAGE_H
-#define SWEETLOCK_IMAGE_H
+#ifndef SWEETLOCK_IMAGE_IMAGE_H
+#define SWEETLOCK_IMAGE_IMAGE_H
 
 #include <cairo.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
-#include "file.h"
+#include "fs/file.h"
 
 enum {
 	IMAGE_FILE_MAX = 64 * 1024 * 1024,

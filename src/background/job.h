@@ -6,9 +6,9 @@
 #include <stdbool.h>
 #include <sys/stat.h>
 
+#include "app/worker.h"
 #include "background/cache.h"
-#include "config.h"
-#include "worker.h"
+#include "config/config.h"
 
 enum { BACKGROUND_ERROR_SIZE = 256 };
 

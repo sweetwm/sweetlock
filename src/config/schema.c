@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "config.h"
+#include "config/config.h"
 #include "config/internal.h"
 #include "log.h"
 #include "utf8.h"

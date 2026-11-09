@@ -9,9 +9,9 @@
 
 #include "background/draw.h"
 #include "background/wallpaper.h"
-#include "file.h"
-#include "image.h"
-#include "path.h"
+#include "fs/file.h"
+#include "fs/path.h"
+#include "image/image.h"
 
 static void add_color(struct cache_key *key, struct color c) {
 	cache_key_add(key, (uint32_t)c.red << 24 | (uint32_t)c.green << 16 |
