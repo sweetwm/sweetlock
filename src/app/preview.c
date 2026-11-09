@@ -106,7 +106,8 @@ static void show_notice(struct auth *auth, enum preview_field state) {
 	}
 }
 
-int app_preview(const struct config *config, const struct preview *preview) {
+int app_preview(const struct config *config, const char *notice,
+	const struct preview *preview) {
 	static const char sample[] = "sweetlock";
 	enum preview_field state = preview->field;
 	struct password *password = password_create();
@@ -140,6 +141,7 @@ int app_preview(const struct config *config, const struct preview *preview) {
 		.auth = &auth,
 		.field = &field,
 		.user = &user,
+		.notice = notice,
 	};
 	ui_content_start(&content, &clock);
 	int status = write_png(&content, preview);

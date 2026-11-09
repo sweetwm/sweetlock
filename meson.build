@@ -74,6 +74,7 @@ endif
 executable(
 	'sweetlock',
 	'src/main.c',
+	'src/app/check.c',
 	'src/app/daemon.c',
 	'src/app/preview.c',
 	'src/app/run.c',
@@ -81,6 +82,7 @@ executable(
 	'src/auth/auth.c',
 	'src/auth/helper.c',
 	'src/auth/message.c',
+	'src/auth/service.c',
 	'src/background/blur.c',
 	'src/background/cache.c',
 	'src/background/draw.c',

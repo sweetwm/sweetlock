@@ -85,6 +85,15 @@ enum auth_result auth_read(struct auth *auth) {
 				  "unlocking");
 			return AUTH_LOST;
 		}
+		// the helper warns about its setup before any attempt
+		struct message_reply reply;
+		bool valid = message_reply(packet, (size_t)size, &reply);
+		if (valid && (reply.kind == MESSAGE_KIND_INFO ||
+				     reply.kind == MESSAGE_KIND_ERROR)) {
+			keep_notice(auth, &reply);
+			result = AUTH_NOTICE;
+			continue;
+		}
 		if (!auth->busy) {
 			log_error("the PAM helper replied with no password "
 				  "out; ignoring it");
@@ -92,15 +101,8 @@ enum auth_result auth_read(struct auth *auth) {
 		}
 		// a broken reply still ends the attempt, or keys would stay
 		// ignored
-		struct message_reply reply;
-		bool valid = message_reply(packet, (size_t)size, &reply);
 		if (!valid) {
 			log_error("the PAM helper sent a malformed reply");
-		} else if (reply.kind == MESSAGE_KIND_INFO ||
-			   reply.kind == MESSAGE_KIND_ERROR) {
-			keep_notice(auth, &reply);
-			result = AUTH_NOTICE;
-			continue;
 		}
 		auth->busy = false;
 		bool success = valid && reply.kind == MESSAGE_KIND_SUCCESS;

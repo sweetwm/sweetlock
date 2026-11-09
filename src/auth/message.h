@@ -36,7 +36,4 @@ bool message_request(const char *data, size_t size, size_t *length);
 
 bool message_reply(const char *data, size_t size, struct message_reply *reply);
 
-size_t message_text(
-	const char *text, size_t size, char out[static MESSAGE_TEXT_MAX]);
-
 #endif

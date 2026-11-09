@@ -14,10 +14,14 @@ int app_daemonize(void);
 // writes the one report byte and closes fd
 void app_report_locked(int fd);
 
-// draws the lock scene to a PNG without connecting to Wayland
-int app_preview(const struct config *config, const struct preview *preview);
+// logs every problem it finds, without connecting to Wayland or PAM
+int app_check(const struct config *config, bool config_ok);
 
-int app_run(const struct config *config, const struct timespec *start,
-	int locked_fd);
+// notice is the config's status line, or empty
+int app_preview(const struct config *config, const char *notice,
+	const struct preview *preview);
+
+int app_run(const struct config *config, const char *notice,
+	const struct timespec *start, int locked_fd);
 
 #endif

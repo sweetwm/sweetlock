@@ -375,12 +375,18 @@ static void draw_field(struct ui *ui, cairo_t *cr, const struct ui_rect *part) {
 static void draw_status(struct ui *ui, cairo_t *cr, int32_t width) {
 	const struct config *config = ui->content->config;
 	const struct auth *auth = ui->content->auth;
-	if (auth->notice == AUTH_NOTICE_NONE) {
+	const char *notice = ui->content->notice;
+	if (auth->notice != AUTH_NOTICE_NONE) {
+		set_source(cr, auth->notice == AUTH_NOTICE_ERROR
+				       ? config->theme.error
+				       : config->theme.muted);
+		text_set(ui->status, auth->notice_text);
+	} else if (notice && notice[0]) {
+		set_source(cr, config->theme.error);
+		text_set(ui->status, notice);
+	} else {
 		return;
 	}
-	set_source(cr, auth->notice == AUTH_NOTICE_ERROR ? config->theme.error
-							 : config->theme.muted);
-	text_set(ui->status, auth->notice_text);
 	draw_line(ui, cr, ui->status, width, theme.status_centre);
 }
 

@@ -28,6 +28,8 @@ const char args_usage[] =
 	"  --no-avatar       Same as --set avatar.enabled=false\n"
 	"  --no-username     Same as --set username.enabled=false\n"
 	"  -f, --daemonize   Return once the screen is locked\n"
+	"  --check           Report problems with the config, the PAM service\n"
+	"                    and the images, then exit without locking\n"
 	"  --preview FILE    Draw the lock screen to a PNG instead of locking\n"
 	"  --size WxH        Output size in pixels for --preview "
 	"(default 1920x1080)\n"
@@ -211,6 +213,7 @@ void args_parse(struct args *args, int argc, char **argv) {
 				.scale = SCALE_DENOMINATOR,
 			},
 	};
+	bool check = false;
 	for (int i = 1; i < argc; i++) {
 		const char *arg = argv[i];
 		const struct alias *alias = find_alias(arg);
@@ -224,6 +227,8 @@ void args_parse(struct args *args, int argc, char **argv) {
 		}
 		if (is(arg, "-f", "--daemonize")) {
 			args->daemonize = true;
+		} else if (strcmp(arg, "--check") == 0) {
+			check = true;
 		} else if (strcmp(arg, "--no-config") == 0) {
 			args->no_config = true;
 		} else if (alias && alias->value) {
@@ -238,7 +243,9 @@ void args_parse(struct args *args, int argc, char **argv) {
 			parse_valued(args, arg, argv[++i]);
 		}
 	}
-	if (args->preview.path) {
+	if (check) {
+		args->action = ARGS_CHECK;
+	} else if (args->preview.path) {
 		args->action = ARGS_PREVIEW;
 	}
 }
