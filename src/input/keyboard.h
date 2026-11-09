@@ -22,6 +22,8 @@ void keyboard_destroy(struct keyboard *keyboard);
 enum key_action keyboard_translate(
 	struct keyboard *keyboard, uint32_t key, char *text, size_t size);
 
+bool keyboard_is_escape(const struct keyboard *keyboard, uint32_t key);
+
 // false when the key does not repeat
 bool keyboard_repeats(const struct keyboard *keyboard, uint32_t key,
 	int32_t *rate, int32_t *delay);

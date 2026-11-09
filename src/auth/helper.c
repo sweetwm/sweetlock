@@ -1,6 +1,7 @@
 #include "auth/helper.h"
 
 #include <errno.h>
+#include <fcntl.h>
 #include <security/pam_appl.h>
 #include <signal.h>
 #include <stdbool.h>
@@ -199,25 +200,41 @@ static void serve(
 
 // PAM modules see only stdio and the socket, and the -f report socket must
 // close when the locker exits
-static void close_inherited(int fd) {
-	if (fd > 3) {
-		close_range(3, (unsigned)fd - 1, 0);
-	}
-	close_range(fd < 3 ? 3 : (unsigned)fd + 1, ~0U, 0);
+static void close_inherited(void) {
+	close_range(HELPER_FD + 1, ~0U, 0);
 }
 
-_Noreturn void helper_run(int fd, pid_t parent, const char *user) {
-	close_inherited(fd);
-	// SIGTERM is blocked here as in the parent, so only SIGKILL works
+// the socket the locker made, so the locker is still its parent; programs
+// PAM runs do not get it
+static bool from_parent(void) {
+	int type = 0;
+	struct ucred peer = {0};
+	socklen_t type_size = sizeof type;
+	socklen_t peer_size = sizeof peer;
+	return getsockopt(HELPER_FD, SOL_SOCKET, SO_TYPE, &type, &type_size) ==
+		       0 &&
+	       type == SOCK_SEQPACKET &&
+	       getsockopt(HELPER_FD, SOL_SOCKET, SO_PEERCRED, &peer,
+		       &peer_size) == 0 &&
+	       peer.pid == getppid() &&
+	       fcntl(HELPER_FD, F_SETFD, FD_CLOEXEC) == 0;
+}
+
+_Noreturn void helper_main(const char *user) {
+	close_inherited();
+	// SIGTERM stays blocked across exec as in the parent, so only SIGKILL
+	// works
 	if (prctl(PR_SET_DUMPABLE, 0, 0, 0, 0) != 0 ||
 		prctl(PR_SET_PDEATHSIG, SIGKILL, 0, 0, 0) != 0 ||
-		getppid() != parent) {
+		!from_parent() || !user[0]) {
 		_exit(EXIT_FAILURE);
 	}
+	// exec through /proc/self/exe names the process "exe"
+	(void)prctl(PR_SET_NAME, "sweetlock", 0, 0, 0);
 	struct password *password = password_create();
 	struct conversation conversation = {
 		.password = password,
-		.fd = fd,
+		.fd = HELPER_FD,
 		.no_service = !service_found(),
 	};
 	if (conversation.no_service) {
@@ -228,7 +245,7 @@ _Noreturn void helper_run(int fd, pid_t parent, const char *user) {
 		.conv = converse, .appdata_ptr = &conversation};
 	pam_handle_t *pam = password ? start(user, &conv) : NULL;
 	if (pam) {
-		serve(fd, pam, &conversation);
+		serve(HELPER_FD, pam, &conversation);
 		pam_end(pam, PAM_SUCCESS);
 	}
 	password_destroy(password);

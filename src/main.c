@@ -2,10 +2,12 @@
 #include <locale.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <unistd.h>
 
 #include "app/app.h"
+#include "auth/helper.h"
 #include "config/args.h"
 #include "config/config.h"
 #include "log.h"
@@ -29,6 +31,10 @@ int main(int argc, char **argv) {
 	bool log_level_ok = log_init();
 	if (!app_protect()) {
 		return EXIT_FAILURE;
+	}
+	// the locker starts its PAM helper as itself, never by hand
+	if (argc == 3 && strcmp(argv[1], HELPER_FLAG) == 0) {
+		helper_main(argv[2]);
 	}
 	struct args args;
 	args_parse(&args, argc, argv);
