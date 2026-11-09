@@ -16,6 +16,12 @@
 
 enum { PAM_TEXT_LOG_MAX = 256 };
 
+struct conversation {
+	struct password *password;
+	// a later hidden prompt asks for something else, such as an OTP code
+	bool answered;
+};
+
 static void free_replies(struct pam_response *replies, int count) {
 	for (int i = 0; i < count; i++) {
 		if (replies[i].resp) {
@@ -28,12 +34,18 @@ static void free_replies(struct pam_response *replies, int count) {
 }
 
 static bool answer(const struct pam_message *message,
-	struct pam_response *reply, const struct password *password) {
+	struct pam_response *reply, struct conversation *conversation) {
 	const char *text = message->msg ? message->msg : "";
 	switch (message->msg_style) {
 	case PAM_PROMPT_ECHO_OFF:
+		if (conversation->answered) {
+			log_warn("PAM asked for a second secret; failing the "
+				 "attempt");
+			return false;
+		}
+		conversation->answered = true;
 		// PAM frees the answer, so it gets its own copy
-		reply->resp = strdup(password->bytes);
+		reply->resp = strdup(conversation->password->bytes);
 		return reply->resp != NULL;
 	case PAM_ERROR_MSG:
 		log_warn("PAM: %.*s", PAM_TEXT_LOG_MAX, text);
@@ -85,7 +97,8 @@ static pam_handle_t *start(const char *user, const struct pam_conv *conv) {
 	return pam;
 }
 
-static bool authenticate(pam_handle_t *pam) {
+static bool authenticate(pam_handle_t *pam, struct conversation *conversation) {
+	conversation->answered = false;
 	int status = pam_authenticate(pam, 0);
 	if (status != PAM_SUCCESS) {
 		// a wrong password is the usual failure; others point at the
@@ -105,7 +118,9 @@ static bool authenticate(pam_handle_t *pam) {
 
 // MSG_TRUNC returns a packet's full size, so an oversized one is seen and
 // refused
-static void serve(int fd, pam_handle_t *pam, struct password *password) {
+static void serve(
+	int fd, pam_handle_t *pam, struct conversation *conversation) {
+	struct password *password = conversation->password;
 	for (;;) {
 		ssize_t size = recv(
 			fd, password->bytes, sizeof password->bytes, MSG_TRUNC);
@@ -121,8 +136,9 @@ static void serve(int fd, pam_handle_t *pam, struct password *password) {
 			log_error(
 				"the PAM helper received a malformed request");
 		}
-		char reply = valid && authenticate(pam) ? MESSAGE_SUCCESS
-							: MESSAGE_FAILURE;
+		char reply = valid && authenticate(pam, conversation)
+				     ? MESSAGE_SUCCESS
+				     : MESSAGE_FAILURE;
 		password_clear(password);
 		if (send(fd, &reply, sizeof reply, MSG_NOSIGNAL) !=
 			(ssize_t)sizeof reply) {
@@ -149,11 +165,12 @@ _Noreturn void helper_run(int fd, pid_t parent, const char *user) {
 		_exit(EXIT_FAILURE);
 	}
 	struct password *password = password_create();
+	struct conversation conversation = {.password = password};
 	const struct pam_conv conv = {
-		.conv = converse, .appdata_ptr = password};
+		.conv = converse, .appdata_ptr = &conversation};
 	pam_handle_t *pam = password ? start(user, &conv) : NULL;
 	if (pam) {
-		serve(fd, pam, password);
+		serve(fd, pam, &conversation);
 		pam_end(pam, PAM_SUCCESS);
 	}
 	password_destroy(password);
