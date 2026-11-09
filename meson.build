@@ -97,6 +97,7 @@ executable(
 	'src/image/image.c',
 	'src/image/jpeg.c',
 	'src/input/input.c',
+	'src/input/key.c',
 	'src/input/keyboard.c',
 	'src/input/password.c',
 	'src/log.c',

@@ -6,6 +6,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <wayland-client.h>
+#include <xkbcommon/xkbcommon-compose.h>
 #include <xkbcommon/xkbcommon.h>
 
 #include "input/input.h"
@@ -27,6 +28,8 @@ struct keyboard {
 	struct wl_keyboard *wl;
 	struct xkb_keymap *keymap;
 	struct xkb_state *state;
+	// made on the first key once the input has a Compose table
+	struct xkb_compose_state *compose;
 	int32_t repeat_rate;
 	int32_t repeat_delay;
 };
@@ -72,6 +75,9 @@ static void keyboard_keymap(void *data, struct wl_keyboard *wl, uint32_t format,
 	xkb_keymap_unref(keyboard->keymap);
 	keyboard->keymap = keymap;
 	keyboard->state = state;
+	if (keyboard->compose) {
+		xkb_compose_state_reset(keyboard->compose);
+	}
 }
 
 // keys already held when focus arrives are not typed
@@ -91,6 +97,9 @@ static void keyboard_leave(void *data, struct wl_keyboard *wl, uint32_t serial,
 	(void)surface;
 	struct keyboard *keyboard = data;
 	input_forget(keyboard->input, keyboard);
+	if (keyboard->compose) {
+		xkb_compose_state_reset(keyboard->compose);
+	}
 }
 
 static void keyboard_key(void *data, struct wl_keyboard *wl, uint32_t serial,
@@ -173,46 +182,21 @@ void keyboard_destroy(struct keyboard *keyboard) {
 	}
 	input_forget(keyboard->input, keyboard);
 	release(keyboard->wl);
+	xkb_compose_state_unref(keyboard->compose);
 	xkb_state_unref(keyboard->state);
 	xkb_keymap_unref(keyboard->keymap);
 	free(keyboard);
 }
 
-// control characters, Ctrl+letter among them, never go into a password
-static bool is_text(const char *text, size_t length) {
-	for (size_t i = 0; i < length; i++) {
-		unsigned char byte = (unsigned char)text[i];
-		if (byte < 0x20 || byte == 0x7f) {
-			return false;
-		}
-	}
-	return length > 0;
-}
-
 enum key_action keyboard_translate(
 	struct keyboard *keyboard, uint32_t key, char *text, size_t size) {
-	struct xkb_state *state = keyboard->state;
-	xkb_keycode_t code = key + EVDEV_OFFSET;
-	xkb_keysym_t sym = xkb_state_key_get_one_sym(state, code);
-	if (sym == XKB_KEY_Return || sym == XKB_KEY_KP_Enter) {
-		return KEY_SUBMIT;
+	struct xkb_compose_table *table = keyboard->input->compose;
+	if (table && !keyboard->compose) {
+		keyboard->compose = xkb_compose_state_new(
+			table, XKB_COMPOSE_STATE_NO_FLAGS);
 	}
-	if (sym == XKB_KEY_BackSpace) {
-		return KEY_BACKSPACE;
-	}
-	bool ctrl = xkb_state_mod_name_is_active(state, XKB_MOD_NAME_CTRL,
-			    XKB_STATE_MODS_EFFECTIVE) > 0;
-	if (sym == XKB_KEY_Escape ||
-		(ctrl && (sym == XKB_KEY_u || sym == XKB_KEY_U))) {
-		return KEY_CLEAR;
-	}
-	int length = xkb_state_key_get_utf8(state, code, text, size);
-	if (length < 0 || (size_t)length >= size ||
-		!is_text(text, (size_t)length)) {
-		explicit_bzero(text, size);
-		return KEY_NONE;
-	}
-	return KEY_TEXT;
+	return key_translate(keyboard->state, keyboard->compose,
+		key + EVDEV_OFFSET, text, size);
 }
 
 bool keyboard_repeats(const struct keyboard *keyboard, uint32_t key,

@@ -1,14 +1,35 @@
 #include "input/input.h"
 
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <sys/timerfd.h>
+#include <time.h>
 #include <unistd.h>
+#include <xkbcommon/xkbcommon-compose.h>
 #include <xkbcommon/xkbcommon.h>
 
 #include "auth/auth.h"
+#include "fs/path.h"
 #include "input/keyboard.h"
 #include "input/password.h"
 #include "log.h"
+
+// through our logger, so its lines never mix with the helper's
+__attribute__((format(printf, 3, 0))) static void log_xkb(
+	struct xkb_context *xkb, enum xkb_log_level level, const char *format,
+	va_list args) {
+	(void)xkb;
+	char line[512];
+	if (vsnprintf(line, sizeof line, format, args) < 0) {
+		return;
+	}
+	line[strcspn(line, "\n")] = '\0';
+	log_at(level <= XKB_LOG_LEVEL_ERROR ? LOG_WARN : LOG_DEBUG,
+		"xkbcommon: %s", line);
+}
 
 bool input_init(struct input *input, struct auth *auth) {
 	*input = (struct input){.auth = auth, .repeat_fd = -1};
@@ -19,6 +40,7 @@ bool input_init(struct input *input, struct auth *auth) {
 		log_error("failed to create the xkb context");
 		return false;
 	}
+	xkb_context_set_log_fn(input->xkb, log_xkb);
 	input->repeat_fd =
 		timerfd_create(CLOCK_MONOTONIC, TFD_CLOEXEC | TFD_NONBLOCK);
 	if (input->repeat_fd < 0) {
@@ -34,8 +56,70 @@ void input_finish(struct input *input) {
 		close(input->repeat_fd);
 	}
 	password_destroy(input->password);
+	xkb_compose_table_unref(input->compose);
 	xkb_context_unref(input->xkb);
 	*input = (struct input){.repeat_fd = -1};
+}
+
+static bool user_files_regular(void) {
+	char paths[3][PATH_MAX] = {{0}};
+	const char *file = getenv("XCOMPOSEFILE");
+	const char *xdg = getenv("XDG_CONFIG_HOME");
+	const char *home = getenv("HOME");
+	if (file) {
+		snprintf(paths[0], PATH_MAX, "%s", file);
+	}
+	if (xdg && xdg[0] == '/') {
+		path_join(paths[1], xdg, "/XCompose");
+	} else if (home) {
+		path_join(paths[1], home, "/.config/XCompose");
+	}
+	if (home) {
+		path_join(paths[2], home, "/.XCompose");
+	}
+	for (size_t i = 0; i < 3; i++) {
+		struct stat info;
+		if (paths[i][0] && stat(paths[i], &info) == 0 &&
+			!S_ISREG(info.st_mode)) {
+			log_warn("%s is not a regular file", paths[i]);
+			return false;
+		}
+	}
+	return true;
+}
+
+// the locale xkbcommon documents for Compose
+static const char *compose_locale(void) {
+	const char *names[] = {"LC_ALL", "LC_CTYPE", "LANG"};
+	for (size_t i = 0; i < 3; i++) {
+		const char *value = getenv(names[i]);
+		if (value && value[0]) {
+			return value;
+		}
+	}
+	return "C";
+}
+
+static void load_compose(struct input *input) {
+	input->compose_loaded = true;
+	const char *locale = compose_locale();
+	struct timespec start = {0};
+	struct timespec end = {0};
+	clock_gettime(CLOCK_MONOTONIC, &start);
+	if (user_files_regular()) {
+		input->compose = xkb_compose_table_new_from_locale(
+			input->xkb, locale, XKB_COMPOSE_COMPILE_NO_FLAGS);
+	}
+	clock_gettime(CLOCK_MONOTONIC, &end);
+	if (!input->compose) {
+		log_warn("no Compose table for locale \"%s\"; dead keys and "
+			 "Compose type nothing",
+			locale);
+		return;
+	}
+	log_debug("Compose table for locale \"%s\" in %.1f ms", locale,
+		(double)(end.tv_sec - start.tv_sec) * 1e3 +
+			(double)(end.tv_nsec - start.tv_nsec) / 1e6);
 }
 
 static struct timespec from_ns(int64_t ns) {
@@ -90,6 +174,7 @@ static enum key_action handle(struct input *input, struct keyboard *keyboard,
 	bool changed = false;
 	switch (action) {
 	case KEY_TEXT:
+	case KEY_COMPOSED:
 		// input past the limit is dropped
 		changed = password_append(password, text, strlen(text));
 		break;
@@ -123,6 +208,10 @@ static bool edits(enum key_action action) {
 void input_press(struct input *input, struct keyboard *keyboard, uint32_t key) {
 	if (input->auth->busy) {
 		return;
+	}
+	// a lock unlocked another way never reads the Compose file
+	if (!input->compose_loaded) {
+		load_compose(input);
 	}
 	// a modifier leaves the held key repeating
 	if (edits(handle(input, keyboard, key, false))) {
