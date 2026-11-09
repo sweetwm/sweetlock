@@ -97,7 +97,7 @@ static void show_notice(struct auth *auth, enum preview_field state) {
 		"Place your finger on the fingerprint reader";
 	static const char error[] = "The account is locked due to 3 failed "
 				    "logins. (5 minutes left to unlock)";
-	if (state == PREVIEW_INFO) {
+	if (state == PREVIEW_INFO || state == PREVIEW_CANCEL) {
 		auth->notice = AUTH_NOTICE_INFO;
 		memcpy(auth->notice_text, info, sizeof info);
 	} else if (state == PREVIEW_ERROR) {
@@ -130,7 +130,10 @@ int app_preview(const struct config *config, const char *notice,
 	struct auth auth = {
 		.pid = -1,
 		.fd = -1,
-		.busy = state == PREVIEW_CHECKING || state == PREVIEW_INFO,
+		.timer_fd = -1,
+		.busy = state == PREVIEW_CHECKING || state == PREVIEW_INFO ||
+			state == PREVIEW_CANCEL,
+		.cancellable = state == PREVIEW_CANCEL,
 	};
 	struct field field = {
 		.timer_fd = -1,

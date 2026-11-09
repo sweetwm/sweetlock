@@ -34,6 +34,8 @@ enum preview_field {
 	// idle with the Caps Lock warning, idle with a second layout active
 	PREVIEW_CAPS,
 	PREVIEW_LAYOUT,
+	// checking long enough to cancel, with a PAM info line
+	PREVIEW_CANCEL,
 };
 
 struct preview {

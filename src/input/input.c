@@ -204,9 +204,12 @@ static bool edits(enum key_action action) {
 	       action == KEY_CLEAR;
 }
 
-// keys typed while an attempt is checked are dropped, not queued
 void input_press(struct input *input, struct keyboard *keyboard, uint32_t key) {
 	if (input->auth->busy) {
+		if (keyboard_is_escape(keyboard, key) &&
+			auth_cancel(input->auth)) {
+			input->changed = true;
+		}
 		return;
 	}
 	// a lock unlocked another way never reads the Compose file

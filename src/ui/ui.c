@@ -322,7 +322,9 @@ static struct color set_entry(struct ui *ui, enum field_state state) {
 		mode = PANGO_ELLIPSIZE_START;
 		break;
 	case FIELD_CHECKING:
-		text = "Checking\xe2\x80\xa6";
+		// PAM's prompt keeps the status line, so the hint goes here
+		text = ui->content->auth->cancellable ? "Press Escape to cancel"
+						      : "Checking\xe2\x80\xa6";
 		color = config->theme.muted;
 		break;
 	case FIELD_FAILED:

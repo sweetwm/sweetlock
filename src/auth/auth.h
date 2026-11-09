@@ -14,12 +14,20 @@ enum auth_notice {
 	AUTH_NOTICE_ERROR,
 };
 
+enum {
+	AUTH_CANCEL_AFTER_S = 10,
+	AUTH_RESPAWN_MAX = 3,
+};
+
 struct auth {
 	pid_t pid;
 	int fd;
-	// a password is out and its reply has not arrived
+	int timer_fd;
+	const char *login;
+	int respawns;
 	bool busy;
-	// PAM's last text in this attempt, kept until the next one starts
+	bool cancellable;
+	bool lost;
 	enum auth_notice notice;
 	char notice_text[MESSAGE_TEXT_MAX + 1];
 };
@@ -34,15 +42,18 @@ enum auth_result {
 	AUTH_LOST,
 };
 
-// forks the PAM helper; must run before any library starts a thread, and
-// fails on an empty login
+// spawns the PAM helper; fails on an empty login, which must outlive auth
 bool auth_start(struct auth *auth, const char *login);
 
 // the caller wipes the password once this returns
 bool auth_submit(struct auth *auth, const struct password *password);
 
-// reads every packet waiting when fd is readable, logging the result
 enum auth_result auth_read(struct auth *auth);
+
+// timer_fd is readable; true when the attempt became cancellable
+bool auth_expire(struct auth *auth);
+
+bool auth_cancel(struct auth *auth);
 
 // never waits on PAM: the helper is killed, then reaped
 void auth_stop(struct auth *auth);

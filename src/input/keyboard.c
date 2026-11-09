@@ -201,6 +201,11 @@ enum key_action keyboard_translate(
 		key + EVDEV_OFFSET, text, size);
 }
 
+bool keyboard_is_escape(const struct keyboard *keyboard, uint32_t key) {
+	return xkb_state_key_get_one_sym(keyboard->state, key + EVDEV_OFFSET) ==
+	       XKB_KEY_Escape;
+}
+
 bool keyboard_repeats(const struct keyboard *keyboard, uint32_t key,
 	int32_t *rate, int32_t *delay) {
 	*rate = keyboard->repeat_rate;

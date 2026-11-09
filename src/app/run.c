@@ -28,6 +28,7 @@ enum {
 	FD_WAYLAND,
 	FD_SIGNAL,
 	FD_AUTH,
+	FD_AUTH_TIMER,
 	FD_REPEAT,
 	FD_CLOCK,
 	FD_FIELD,
@@ -177,6 +178,9 @@ static bool handle_fds(struct app *app, const struct pollfd *fds) {
 	if (fds[FD_AUTH].revents && !handle_auth(app)) {
 		return false;
 	}
+	if ((fds[FD_AUTH_TIMER].revents & POLLIN) && auth_expire(&app->auth)) {
+		display_mark_dirty(&app->display, UI_LOGIN);
+	}
 	if (fds[FD_REPEAT].revents & POLLIN) {
 		input_repeat(&app->input);
 	}
@@ -192,9 +196,11 @@ static bool handle_fds(struct app *app, const struct pollfd *fds) {
 	return true;
 }
 
-static bool stopping(const struct display *display) {
+// a cancel that found no new helper sets auth.lost from a key handler
+static bool stopping(const struct app *app) {
+	const struct display *display = &app->display;
 	return display->failed || display->lock.state == LOCK_REFUSED ||
-	       display->lock.state == LOCK_UNLOCKING;
+	       display->lock.state == LOCK_UNLOCKING || app->auth.lost;
 }
 
 // a queued unlock wins over any failure, and ends only after the
@@ -271,8 +277,10 @@ static bool flush(struct wl_display *wl, short *events) {
 	return true;
 }
 
-// poll skips a negative fd, so these wait until the UI starts them
+// poll skips a negative fd, so these wait until the UI starts them; a new
+// PAM helper brings a new socket
 static void late_fds(const struct app *app, struct pollfd *fds) {
+	fds[FD_AUTH].fd = app->auth.fd;
 	fds[FD_CLOCK].fd = app->clock.fd;
 	fds[FD_WORKER].fd = app->worker.fd;
 }
@@ -283,7 +291,8 @@ static int run(struct app *app) {
 	struct pollfd fds[FD_COUNT] = {
 		[FD_WAYLAND] = {.fd = wl_display_get_fd(wl)},
 		[FD_SIGNAL] = {.fd = app->signal_fd, .events = POLLIN},
-		[FD_AUTH] = {.fd = app->auth.fd, .events = POLLIN},
+		[FD_AUTH] = {.events = POLLIN},
+		[FD_AUTH_TIMER] = {.fd = app->auth.timer_fd, .events = POLLIN},
 		[FD_REPEAT] = {.fd = app->input.repeat_fd, .events = POLLIN},
 		[FD_CLOCK] = {.events = POLLIN},
 		[FD_FIELD] = {.fd = app->field.timer_fd, .events = POLLIN},
@@ -298,7 +307,7 @@ static int run(struct app *app) {
 		}
 		// every dispatch and signal is acted on here before blocking
 		report_locked(app);
-		if (stopping(display)) {
+		if (stopping(app)) {
 			wl_display_cancel_read(wl);
 			return stop(display);
 		}
@@ -353,7 +362,7 @@ static bool open_signals(struct app *app) {
 int app_run(const struct config *config, const char *notice,
 	const struct timespec *start, int locked_fd) {
 	struct app app = {
-		.auth = {.pid = -1, .fd = -1},
+		.auth = {.pid = -1, .fd = -1, .timer_fd = -1},
 		.input = {.repeat_fd = -1},
 		.clock = {.fd = -1},
 		.field = {.timer_fd = -1},
