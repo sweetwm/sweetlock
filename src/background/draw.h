@@ -4,7 +4,7 @@
 #include <cairo.h>
 #include <stdbool.h>
 
-#include "config.h"
+#include "config/config.h"
 
 bool background_draw(const struct config *config, cairo_surface_t *target);
 

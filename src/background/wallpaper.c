@@ -4,8 +4,8 @@
 #include <stdio.h>
 
 #include "background/blur.h"
-#include "image.h"
-#include "scale.h"
+#include "image/image.h"
+#include "wayland/scale.h"
 
 // where the image lands on the output, in output pixels
 struct placement {

@@ -1,4 +1,4 @@
-#include "jpeg.h"
+#include "image/jpeg.h"
 
 #include <math.h>
 #include <setjmp.h>

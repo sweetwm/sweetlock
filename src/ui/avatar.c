@@ -5,9 +5,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "image.h"
+#include "fs/path.h"
+#include "image/image.h"
 #include "log.h"
-#include "path.h"
 
 static void set_paths(
 	struct avatar *avatar, const char *configured, const char *login) {

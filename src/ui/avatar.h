@@ -4,7 +4,7 @@
 #include <cairo.h>
 #include <limits.h>
 
-#include "worker.h"
+#include "app/worker.h"
 
 enum {
 	// avatar.path, the AccountsService icon, ~/.face

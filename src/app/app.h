@@ -1,11 +1,11 @@
-#ifndef SWEETLOCK_APP_H
-#define SWEETLOCK_APP_H
+#ifndef SWEETLOCK_APP_APP_H
+#define SWEETLOCK_APP_APP_H
 
 #include <stdbool.h>
 #include <time.h>
 
-#include "args.h"
-#include "config.h"
+#include "config/args.h"
+#include "config/config.h"
 
 bool app_protect(void);
 

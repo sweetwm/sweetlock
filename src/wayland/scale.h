@@ -1,5 +1,5 @@
-#ifndef SWEETLOCK_SCALE_H
-#define SWEETLOCK_SCALE_H
+#ifndef SWEETLOCK_WAYLAND_SCALE_H
+#define SWEETLOCK_WAYLAND_SCALE_H
 
 #include <stdbool.h>
 #include <stdint.h>

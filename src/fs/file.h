@@ -1,5 +1,5 @@
-#ifndef SWEETLOCK_FILE_H
-#define SWEETLOCK_FILE_H
+#ifndef SWEETLOCK_FS_FILE_H
+#define SWEETLOCK_FS_FILE_H
 
 #include <stddef.h>
 #include <sys/stat.h>

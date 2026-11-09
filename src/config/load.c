@@ -2,8 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "config.h"
-#include "file.h"
+#include "config/config.h"
+#include "fs/file.h"
 #include "log.h"
 
 static bool default_path(char *path, size_t size) {
