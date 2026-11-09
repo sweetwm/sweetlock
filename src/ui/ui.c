@@ -13,6 +13,7 @@
 #include "render/text.h"
 #include "ui/clock.h"
 #include "ui/field.h"
+#include "ui/status.h"
 #include "ui/user.h"
 #include "wayland/scale.h"
 
@@ -371,22 +372,26 @@ static void draw_field(struct ui *ui, cairo_t *cr, const struct ui_rect *part) {
 	}
 }
 
-// PAM's text is plain text from the helper, never markup
+// PAM's text and the layout name are plain text, never markup
 static void draw_status(struct ui *ui, cairo_t *cr, int32_t width) {
 	const struct config *config = ui->content->config;
-	const struct auth *auth = ui->content->auth;
-	const char *notice = ui->content->notice;
-	if (auth->notice != AUTH_NOTICE_NONE) {
-		set_source(cr, auth->notice == AUTH_NOTICE_ERROR
-				       ? config->theme.error
-				       : config->theme.muted);
-		text_set(ui->status, auth->notice_text);
-	} else if (notice && notice[0]) {
-		set_source(cr, config->theme.error);
-		text_set(ui->status, notice);
-	} else {
+	const char *text = NULL;
+	switch (status_line(ui->content, &text)) {
+	case STATUS_NONE:
 		return;
+	case STATUS_PAM_INFO:
+	case STATUS_LAYOUT:
+		set_source(cr, config->theme.muted);
+		break;
+	case STATUS_CAPS_LOCK:
+		set_source(cr, config->theme.foreground);
+		break;
+	case STATUS_PAM_ERROR:
+	case STATUS_NOTICE:
+		set_source(cr, config->theme.error);
+		break;
 	}
+	text_set(ui->status, text);
 	draw_line(ui, cr, ui->status, width, theme.status_centre);
 }
 

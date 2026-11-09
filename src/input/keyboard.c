@@ -112,6 +112,7 @@ static void keyboard_key(void *data, struct wl_keyboard *wl, uint32_t serial,
 		return;
 	}
 	if (state == WL_KEYBOARD_KEY_STATE_PRESSED) {
+		input_status(keyboard->input, keyboard->state);
 		input_press(keyboard->input, keyboard, key);
 	} else if (state == WL_KEYBOARD_KEY_STATE_RELEASED) {
 		input_release(keyboard->input, keyboard, key);
@@ -127,6 +128,7 @@ static void keyboard_modifiers(void *data, struct wl_keyboard *wl,
 	if (keyboard->state) {
 		xkb_state_update_mask(keyboard->state, depressed, latched,
 			locked, 0, 0, group);
+		input_status(keyboard->input, keyboard->state);
 	}
 }
 

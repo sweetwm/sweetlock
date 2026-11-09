@@ -3,6 +3,8 @@
 #include <stdbool.h>
 #include <string.h>
 
+#include "utf8.h"
+
 // control characters, Ctrl+letter among them, never go into a password
 static bool is_text(const char *text, size_t length) {
 	for (size_t i = 0; i < length; i++) {
@@ -75,4 +77,20 @@ enum key_action key_translate(struct xkb_state *state,
 	}
 	int length = xkb_state_key_get_utf8(state, code, text, size);
 	return take(KEY_TEXT, length, text, size);
+}
+
+bool key_status(struct xkb_state *state, char *layout, size_t size) {
+	memset(layout, 0, size);
+	struct xkb_keymap *keymap = xkb_state_get_keymap(state);
+	const char *name = NULL;
+	if (xkb_keymap_num_layouts(keymap) > 1) {
+		name = xkb_keymap_layout_get_name(
+			keymap, xkb_state_serialize_layout(
+					state, XKB_STATE_LAYOUT_EFFECTIVE));
+	}
+	if (name && size > 0) {
+		utf8_line(name, strnlen(name, 4 * size), layout, size - 1);
+	}
+	return xkb_state_mod_name_is_active(
+		       state, XKB_MOD_NAME_CAPS, XKB_STATE_MODS_LOCKED) > 0;
 }
