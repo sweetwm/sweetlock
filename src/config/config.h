@@ -30,6 +30,11 @@ enum background_fit {
 	FIT_STRETCH,
 };
 
+enum input_layout {
+	LAYOUT_STATUS,
+	LAYOUT_CORNER,
+};
+
 struct color {
 	uint8_t red;
 	uint8_t green;
@@ -102,6 +107,7 @@ struct config {
 	struct {
 		char placeholder[CONFIG_STRING_SIZE];
 		bool reveal_toggle;
+		enum input_layout layout;
 	} input;
 	struct {
 		// seconds without input before the outputs power off; 0 never

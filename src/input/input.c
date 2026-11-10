@@ -278,10 +278,14 @@ void input_status(struct input *input, struct xkb_state *state) {
 	struct input_status status;
 	status.caps_lock =
 		key_status(state, status.layout, sizeof status.layout);
-	if (memcmp(&status, &input->status, sizeof status) != 0) {
-		input->status = status;
+	if (status.caps_lock != input->status.caps_lock) {
 		input->changed = true;
 	}
+	if (memcmp(status.layout, input->status.layout, sizeof status.layout) !=
+		0) {
+		input->layout_changed = true;
+	}
+	input->status = status;
 }
 
 void input_toggle_reveal(struct input *input) {

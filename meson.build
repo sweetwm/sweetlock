@@ -101,6 +101,7 @@ executable(
 	'src/input/input.c',
 	'src/input/key.c',
 	'src/input/keyboard.c',
+	'src/input/layout.c',
 	'src/input/password.c',
 	'src/log.c',
 	'src/render/icon.c',

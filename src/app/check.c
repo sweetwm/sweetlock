@@ -7,6 +7,7 @@
 #include "auth/service.h"
 #include "fs/path.h"
 #include "image/image.h"
+#include "input/layout.h"
 #include "log.h"
 
 // the same reads and header checks the lock does, without decoding
@@ -49,6 +50,24 @@ static bool image_ok(const char *key, const char *configured) {
 	return false;
 }
 
+// a missing list only costs the badge its exact codes, so it warns
+static void layouts_ok(void) {
+	char path[PATH_MAX];
+	char error[256] = "";
+	char *data = NULL;
+	size_t length = 0;
+	enum file_result result =
+		layout_list_load(path, &data, &length, error, sizeof error);
+	free(data);
+	if (result == FILE_OK) {
+		log_info("input.layout: layout codes from %s", path);
+	} else if (result == FILE_MISSING) {
+		log_warn("input.layout: no xkeyboard-config rules/evdev.lst");
+	} else {
+		log_warn("input.layout: %s: %s", path, error);
+	}
+}
+
 int app_check(const struct config *config, bool config_ok) {
 	bool ok = config_ok;
 	if (!service_found()) {
@@ -63,6 +82,9 @@ int app_check(const struct config *config, bool config_ok) {
 		!image_ok("background.image.path",
 			config->background.image.path)) {
 		ok = false;
+	}
+	if (config->input.layout == LAYOUT_CORNER) {
+		layouts_ok();
 	}
 	if (!ok) {
 		log_error("--check found problems");

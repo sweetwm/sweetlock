@@ -98,6 +98,10 @@ text = ""
 placeholder = "Password"
 # The eye in the field that shows the typed text
 reveal_toggle = true
+# Where the keyboard layout shows when the keymap has more than one:
+# "status" puts its name on the status line under the field, "corner" puts
+# its code (US, LV) in a round badge at the top right of every output
+layout = "status"
 
 [screen_off]
 # Seconds without input on the lock screen before every output powers off,

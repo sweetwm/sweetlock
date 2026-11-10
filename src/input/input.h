@@ -28,6 +28,8 @@ struct input {
 	bool revealed;
 	struct input_status status;
 	bool changed;
+	// apart from changed, since the layout may have its own part
+	bool layout_changed;
 	int64_t active_ns;
 	// the display keeps this current from the outputs' power modes
 	bool screens_off;

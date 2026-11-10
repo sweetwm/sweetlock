@@ -212,6 +212,12 @@ static void render(struct app *app) {
 		app->input.changed = false;
 		display_mark_dirty(display, UI_LOGIN);
 	}
+	if (app->input.layout_changed) {
+		app->input.layout_changed = false;
+		display_mark_dirty(display,
+			app->config->input.layout == LAYOUT_CORNER ? UI_LAYOUT
+								   : UI_LOGIN);
+	}
 	if (display_render(display, &app->content) &&
 		app->stage == STAGE_STARTED) {
 		log_info("first UI frame in %.1f ms",
