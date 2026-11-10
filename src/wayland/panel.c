@@ -84,10 +84,6 @@ bool panel_place(struct panel *panel, const struct ui_rect *rect,
 	return true;
 }
 
-void panel_mark_dirty(struct panel *panel) {
-	panel->dirty = true;
-}
-
 static void frame_done(void *data, struct wl_callback *callback, uint32_t ms) {
 	(void)ms;
 	struct panel *panel = data;

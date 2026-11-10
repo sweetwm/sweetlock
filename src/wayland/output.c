@@ -361,7 +361,7 @@ bool output_render(struct output *output, const struct ui_content *content) {
 
 void output_mark_dirty(struct output *output, enum ui_part part) {
 	if (output->panels[part]) {
-		panel_mark_dirty(output->panels[part]);
+		output->panels[part]->dirty = true;
 	}
 }
 

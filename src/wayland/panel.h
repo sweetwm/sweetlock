@@ -39,8 +39,6 @@ struct panel *panel_create(
 bool panel_place(struct panel *panel, const struct ui_rect *rect,
 	uint32_t scale, bool *moved);
 
-void panel_mark_dirty(struct panel *panel);
-
 // draws and commits when dirty, with no frame pending and a free buffer
 enum panel_result panel_render(struct panel *panel, struct ui *ui);
 
