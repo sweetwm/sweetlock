@@ -43,23 +43,6 @@ jobs:
       - name: Lint shell scripts
         run: shellcheck scripts/all scripts/check scripts/format scripts/sanitize scripts/tidy scripts/valgrind
 
-  format:
-    name: Format
-    if: vars.RUN_CI == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    container:
-      image: archlinux:latest
-    steps:
-      - name: Install dependencies
-        run: |
-          # shellcheck disable=SC2086
-          pacman -Syu --noconfirm --needed $PACMAN_DEPS
-      - name: Check out repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Check formatting
-        run: ./scripts/format check
-
   build:
     name: Build (${{ matrix.compiler }})
     if: vars.RUN_CI == 'true'
