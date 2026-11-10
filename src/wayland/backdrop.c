@@ -28,7 +28,6 @@ struct backdrop *backdrop_get(struct display *display,
 		.width = width,
 		.height = height,
 		.scale = shared,
-		.state = BACKDROP_FAILED,
 		.refs = 1,
 	};
 	wl_list_insert(&display->backdrops, &backdrop->link);
@@ -49,7 +48,6 @@ struct backdrop *backdrop_get(struct display *display,
 		.stride = width * 4,
 	};
 	background_job_init(&backdrop->job, config, &image, scale);
-	backdrop->state = BACKDROP_DRAWING;
 	backdrop->working = true;
 	worker_submit(worker, &backdrop->job.base);
 	return backdrop;
@@ -65,7 +63,6 @@ static void loaded(struct display *display, struct worker *worker,
 	struct backdrop *backdrop) {
 	struct background_job *job = &backdrop->job;
 	if (job->result == BACKGROUND_FAILED) {
-		backdrop->state = BACKDROP_FAILED;
 		// every output fails the same way, so once is enough
 		if (!display->background_warned && job->path[0]) {
 			log_warn("background image %s: %s; keeping the base "
@@ -88,7 +85,7 @@ static void loaded(struct display *display, struct worker *worker,
 		job->result == BACKGROUND_CACHED ? "read from the cache"
 						 : "drawn",
 		job->elapsed_ms);
-	backdrop->state = BACKDROP_READY;
+	backdrop->ready = true;
 	// the pixels are final, and only read from now on
 	if (job->save) {
 		background_job_save(job);

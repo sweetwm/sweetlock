@@ -11,12 +11,6 @@ struct config;
 struct display;
 struct worker;
 
-enum backdrop_state {
-	BACKDROP_DRAWING,
-	BACKDROP_READY,
-	BACKDROP_FAILED,
-};
-
 struct backdrop {
 	struct wl_list link;
 	int32_t width;
@@ -25,7 +19,8 @@ struct backdrop {
 	uint32_t scale;
 	struct buffer *buffer;
 	struct background_job job;
-	enum backdrop_state state;
+	// the pixels are final and can be attached; never set after a failure
+	bool ready;
 	// with the worker, so neither the job nor the pixels may be touched
 	bool working;
 	int refs;
