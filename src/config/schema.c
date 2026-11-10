@@ -57,7 +57,9 @@ static const struct config defaults = {
 	.date = {.enabled = true, .format = "%A, %B %-d"},
 	.avatar = {.enabled = true, .path = ""},
 	.username = {.enabled = true, .text = ""},
-	.input = {.placeholder = "Password", .reveal_toggle = true},
+	.input = {.placeholder = "Password",
+		.reveal_toggle = true,
+		.layout = LAYOUT_STATUS},
 	.theme =
 		{
 			.font = "sans-serif",
@@ -75,9 +77,12 @@ static const char *const bases[] = {"solid", "gradient", "radial", NULL};
 
 static const char *const fits[] = {"fill", "fit", "center", "stretch", NULL};
 
+static const char *const layouts[] = {"status", "corner", NULL};
+
 // enum fields are written as an int
 static_assert(sizeof(enum background_mode) == sizeof(int), "enum size");
 static_assert(sizeof(enum background_fit) == sizeof(int), "enum size");
+static_assert(sizeof(enum input_layout) == sizeof(int), "enum size");
 
 #define FIELD(field) offsetof(struct config, field)
 #define KEY(path, type, field) {path, type, FIELD(field), 0, 0, 0, NULL}
@@ -124,6 +129,7 @@ static const struct config_key keys[] = {
 	KEY("username.text", CONFIG_STRING, username.text),
 	KEY("input.placeholder", CONFIG_STRING, input.placeholder),
 	KEY("input.reveal_toggle", CONFIG_BOOL, input.reveal_toggle),
+	ENUM("input.layout", input.layout, layouts),
 	INT("screen_off.timeout", screen_off.timeout, 0, 3600),
 	KEY("theme.font", CONFIG_STRING, theme.font),
 	KEY("theme.foreground", CONFIG_COLOR, theme.foreground),

@@ -6,13 +6,14 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "input/input.h"
+#include "input/layout.h"
 #include "ui/avatar.h"
 
 struct auth;
 struct clock;
 struct config;
 struct field;
-struct input;
 struct user;
 struct worker;
 
@@ -20,6 +21,8 @@ struct worker;
 enum ui_part {
 	UI_CLOCK,
 	UI_LOGIN,
+	// the keyboard layout's badge in the top right corner
+	UI_LAYOUT,
 	UI_PARTS,
 };
 
@@ -44,6 +47,9 @@ struct ui_content {
 	// plain text about the setup, shown while PAM has nothing to say
 	const char *notice;
 	struct avatar avatar;
+	// xkeyboard-config's layout list for the badge; NULL guesses
+	char *layouts;
+	size_t layouts_length;
 };
 
 // enough to fill the field; more shows as an ellipsis
@@ -58,6 +64,10 @@ struct ui {
 	PangoLayout *name;
 	PangoLayout *entry;
 	PangoLayout *status;
+	PangoLayout *badge;
+	// the layout name the badge's label was found for
+	char badge_name[INPUT_LAYOUT_SIZE];
+	char badge_label[LAYOUT_LABEL_SIZE];
 	// the avatar cut to its circle at this scale, made on first use
 	cairo_surface_t *avatar;
 	// a bullet per code point, three bytes each

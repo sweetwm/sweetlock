@@ -1,5 +1,6 @@
 #include "ui/ui.h"
 
+#include <limits.h>
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,6 +8,7 @@
 #include "auth/auth.h"
 #include "config/config.h"
 #include "input/input.h"
+#include "input/layout.h"
 #include "input/password.h"
 #include "log.h"
 #include "render/icon.h"
@@ -39,11 +41,14 @@ static const struct {
 	int32_t eye_inset;
 	int32_t eye_hit;
 	int32_t status_centre;
+	int32_t badge_size;
+	int32_t badge_margin;
 	double time_size;
 	double date_size;
 	double name_size;
 	double entry_size;
 	double status_size;
+	double badge_text_size;
 	double outline;
 } theme = {
 	.width = 560,
@@ -65,13 +70,34 @@ static const struct {
 	.eye_inset = 28,
 	.eye_hit = 56,
 	.status_centre = 334,
+	.badge_size = 46,
+	.badge_margin = 22,
 	.time_size = 88,
 	.date_size = 18,
 	.name_size = 28,
 	.entry_size = 17,
 	.status_size = 15,
+	.badge_text_size = 15,
 	.outline = 1.5,
 };
+
+// read once, after locked, like the Compose table
+static void load_layouts(struct ui_content *content) {
+	char path[PATH_MAX];
+	char error[256] = "";
+	enum file_result result = layout_list_load(path, &content->layouts,
+		&content->layouts_length, error, sizeof error);
+	if (result == FILE_OK) {
+		log_debug("layout codes from %s", path);
+	} else if (result == FILE_MISSING) {
+		log_warn("no xkeyboard-config rules/evdev.lst; the layout "
+			 "badge shows the name's first letters");
+	} else {
+		log_warn("%s: %s; the layout badge shows the name's first "
+			 "letters",
+			path, error);
+	}
+}
 
 void ui_content_start(struct ui_content *content, struct clock *clock) {
 	const struct config *config = content->config;
@@ -85,16 +111,24 @@ void ui_content_start(struct ui_content *content, struct clock *clock) {
 		avatar_load(&content->avatar, config->avatar.path,
 			content->user->login, content->worker);
 	}
+	if (config->input.layout == LAYOUT_CORNER) {
+		load_layouts(content);
+	}
 }
 
 void ui_content_finish(struct ui_content *content) {
 	avatar_destroy(&content->avatar);
+	free(content->layouts);
+	content->layouts = NULL;
 }
 
 bool ui_shows(const struct ui_content *content, enum ui_part part) {
 	const struct config *config = content->config;
 	if (part == UI_CLOCK) {
 		return config->clock.enabled || config->date.enabled;
+	}
+	if (part == UI_LAYOUT) {
+		return config->input.layout == LAYOUT_CORNER;
 	}
 	return true;
 }
@@ -125,6 +159,18 @@ bool ui_place(const struct ui_content *content, enum ui_part part,
 	}
 	const struct config *config = content->config;
 	int32_t step = scale_step(scale);
+	if (part == UI_LAYOUT) {
+		int32_t side = round_up(theme.badge_size, step);
+		// snapped inwards, so the margin is never lost
+		int32_t x = width - theme.badge_margin - side;
+		*rect = (struct ui_rect){
+			.x = x < 0 ? 0 : x / step * step,
+			.y = round_up(theme.badge_margin, step),
+			.width = side,
+			.height = side,
+		};
+		return true;
+	}
 	int32_t w = width < theme.width ? width : theme.width;
 	w = w / step * step;
 	if (w == 0) {
@@ -180,6 +226,8 @@ static void set_fonts(struct ui *ui) {
 	// PAM's lines run longer than the field
 	text_set_font(ui->status, font, PANGO_WEIGHT_NORMAL,
 		theme.status_size * s, theme.width * s);
+	text_set_font(ui->badge, font, PANGO_WEIGHT_BOLD,
+		theme.badge_text_size * s, theme.badge_size * s);
 }
 
 struct ui *ui_create(const struct ui_content *content, uint32_t scale) {
@@ -196,8 +244,10 @@ struct ui *ui_create(const struct ui_content *content, uint32_t scale) {
 		.name = text_layout_create(),
 		.entry = text_layout_create(),
 		.status = text_layout_create(),
+		.badge = text_layout_create(),
 	};
-	if (!ui->time || !ui->date || !ui->name || !ui->entry || !ui->status) {
+	if (!ui->time || !ui->date || !ui->name || !ui->entry || !ui->status ||
+		!ui->badge) {
 		log_error("failed to create the UI's text layouts");
 		ui_destroy(ui);
 		return NULL;
@@ -434,11 +484,37 @@ static bool draw_login(
 	return true;
 }
 
+// one layout needs no badge, and the name is looked up only when it changes
+static void draw_badge(struct ui *ui, cairo_t *cr, int32_t width) {
+	const struct ui_content *content = ui->content;
+	const char *name = content->input->status.layout;
+	if (!name[0]) {
+		return;
+	}
+	if (strcmp(name, ui->badge_name) != 0) {
+		layout_label(content->layouts, content->layouts_length, name,
+			ui->badge_label, sizeof ui->badge_label);
+		memcpy(ui->badge_name, name, sizeof ui->badge_name);
+		text_set(ui->badge, ui->badge_label);
+	}
+	if (!ui->badge_label[0]) {
+		return;
+	}
+	double radius = scale_physical(ui->scale, theme.badge_size) / 2.0;
+	set_source(cr, content->config->theme.field);
+	cairo_arc(cr, width / 2.0, radius, radius, 0, 2 * M_PI);
+	cairo_fill(cr);
+	set_source(cr, content->config->theme.foreground);
+	text_draw_centred(cr, ui->badge, width, radius);
+}
+
 bool ui_draw(struct ui *ui, enum ui_part part, cairo_t *cr,
 	const struct ui_rect *rect) {
 	int32_t width = scale_physical(ui->scale, rect->width);
 	if (part == UI_CLOCK) {
 		draw_clock(ui, cr, width);
+	} else if (part == UI_LAYOUT) {
+		draw_badge(ui, cr, width);
 	} else if (!draw_login(ui, cr, rect, width)) {
 		return false;
 	}
@@ -466,7 +542,7 @@ void ui_destroy(struct ui *ui) {
 		return;
 	}
 	PangoLayout *layouts[] = {
-		ui->time, ui->date, ui->name, ui->entry, ui->status};
+		ui->time, ui->date, ui->name, ui->entry, ui->status, ui->badge};
 	for (size_t i = 0; i < sizeof layouts / sizeof layouts[0]; i++) {
 		if (layouts[i]) {
 			g_object_unref(layouts[i]);

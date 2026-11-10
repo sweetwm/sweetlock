@@ -1,6 +1,7 @@
 #include "ui/status.h"
 
 #include "auth/auth.h"
+#include "config/config.h"
 #include "input/input.h"
 #include "ui/ui.h"
 
@@ -23,7 +24,7 @@ enum status_kind status_line(
 		*text = content->notice;
 		return STATUS_NOTICE;
 	}
-	if (keys->layout[0]) {
+	if (keys->layout[0] && content->config->input.layout == LAYOUT_STATUS) {
 		*text = keys->layout;
 		return STATUS_LAYOUT;
 	}
