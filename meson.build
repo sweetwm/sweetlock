@@ -79,6 +79,7 @@ executable(
 	'src/app/preview.c',
 	'src/app/run.c',
 	'src/app/screen.c',
+	'src/app/signals.c',
 	'src/app/worker.c',
 	'src/auth/auth.c',
 	'src/auth/helper.c',
