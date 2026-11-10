@@ -216,20 +216,6 @@ static void run(struct worker_job *base) {
 	}
 }
 
-static bool image_path(const struct config *config, char path[PATH_MAX],
-	char *error, size_t error_size) {
-	const char *why = NULL;
-	if (!path_expand(path, config->background.image.path, &why)) {
-		snprintf(error, error_size, "%s", why);
-		return false;
-	}
-	if (!path[0]) {
-		snprintf(error, error_size, "background.image.path is empty");
-		return false;
-	}
-	return true;
-}
-
 void background_job_init(struct background_job *job,
 	const struct config *config, const struct cache_image *image,
 	uint32_t scale) {
@@ -241,8 +227,15 @@ void background_job_init(struct background_job *job,
 		.phase = BACKGROUND_LOAD,
 		.result = BACKGROUND_FAILED,
 	};
-	if (config->background.mode == BACKGROUND_IMAGE) {
-		image_path(config, job->path, job->error, sizeof job->error);
+	if (config->background.mode != BACKGROUND_IMAGE) {
+		return;
+	}
+	const char *why = NULL;
+	if (!path_expand(job->path, config->background.image.path, &why)) {
+		snprintf(job->error, sizeof job->error, "%s", why);
+	} else if (!job->path[0]) {
+		snprintf(job->error, sizeof job->error,
+			"background.image.path is empty");
 	}
 }
 
@@ -253,27 +246,20 @@ void background_job_save(struct background_job *job) {
 
 bool background_paint(const struct config *config, uint32_t scale,
 	cairo_surface_t *target, char *error, size_t error_size) {
-	if (config->background.mode != BACKGROUND_IMAGE) {
-		bool ok = background_draw(config, target);
-		if (!ok) {
-			snprintf(error, error_size, "failed to draw it");
-		}
-		return ok;
+	struct background_job job;
+	background_job_init(&job, config, &(struct cache_image){0}, scale);
+	int fd = -1;
+	struct stat file = {0};
+	bool ok = config->background.mode != BACKGROUND_IMAGE
+			  ? background_draw(config, target)
+			  : open_image(&job, &fd, &file) &&
+				    draw_image(&job, fd, &file, target);
+	if (fd >= 0) {
+		close(fd);
 	}
-	char path[PATH_MAX];
-	char *data = NULL;
-	size_t length = 0;
-	if (!image_path(config, path, error, error_size)) {
-		return false;
+	if (!ok) {
+		snprintf(error, error_size, "%s",
+			job.error[0] ? job.error : "failed to draw it");
 	}
-	enum file_result result = file_read(
-		path, IMAGE_FILE_MAX, &data, &length, error, error_size);
-	if (result == FILE_MISSING) {
-		snprintf(error, error_size, "no such file");
-	}
-	bool ok = result == FILE_OK &&
-		  wallpaper_draw((const unsigned char *)data, length, config,
-			  scale, target, error, error_size);
-	free(data);
 	return ok;
 }
