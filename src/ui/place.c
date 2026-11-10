@@ -32,6 +32,13 @@ int32_t ui_login_skip(const struct config *config) {
 	return clock_centred(config) ? ui_theme.field_top : 0;
 }
 
+static int32_t centred_lift(void) {
+	int32_t clock_top = ui_theme.name_centre - ui_theme.date_centre +
+			    ui_theme.time_centre -
+			    (int32_t)ui_theme.time_size / 2;
+	return (clock_top - ui_theme.avatar_top) / 2;
+}
+
 bool ui_place(const struct ui_content *content, enum ui_part part,
 	int32_t width, int32_t height, uint32_t scale, struct ui_rect *rect) {
 	if (width <= 0 || height <= 0 || width > SCALE_SIDE_MAX ||
@@ -60,7 +67,7 @@ bool ui_place(const struct ui_content *content, enum ui_part part,
 	int32_t login = height / 2 - ui_theme.login_above;
 	int32_t clock = ui_theme.clock_top;
 	if (clock_centred(config)) {
-		// the date lands where the name would be
+		login -= centred_lift();
 		int32_t centred =
 			login + ui_theme.name_centre - ui_theme.date_centre;
 		clock = centred > clock ? centred : clock;
