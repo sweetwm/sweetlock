@@ -107,28 +107,48 @@ static int32_t round_up(int32_t value, int32_t step) {
 	return (value + step - 1) / step * step;
 }
 
-bool ui_place(enum ui_part part, int32_t width, int32_t height, uint32_t scale,
-	struct ui_rect *rect) {
+// with no avatar and no name, the clock takes their place above the field
+static bool clock_centred(const struct config *config) {
+	return !config->avatar.enabled && !config->username.enabled;
+}
+
+// what the login part leaves off its top, where the avatar and name go
+static int32_t login_skip(const struct config *config) {
+	return clock_centred(config) ? theme.field_top : 0;
+}
+
+bool ui_place(const struct ui_content *content, enum ui_part part,
+	int32_t width, int32_t height, uint32_t scale, struct ui_rect *rect) {
 	if (width <= 0 || height <= 0 || width > SCALE_SIDE_MAX ||
 		height > SCALE_SIDE_MAX) {
 		return false;
 	}
+	const struct config *config = content->config;
 	int32_t step = scale_step(scale);
 	int32_t w = width < theme.width ? width : theme.width;
 	w = w / step * step;
 	if (w == 0) {
 		w = step;
 	}
-	int32_t y = part == UI_CLOCK ? theme.clock_top
-				     : height / 2 - theme.login_above;
+	int32_t login = height / 2 - theme.login_above;
+	int32_t clock = theme.clock_top;
+	if (clock_centred(config)) {
+		// the date lands where the name would be
+		int32_t centred = login + theme.name_centre - theme.date_centre;
+		clock = centred > clock ? centred : clock;
+	}
+	int32_t skip = login_skip(config);
+	login += skip;
 	// on a short output the login part moves down rather than cover the
 	// date
-	int32_t clock_bottom = snap(theme.clock_top, step) +
-			       round_up(theme.clock_height, step);
-	if (part == UI_LOGIN && y < clock_bottom) {
-		y = clock_bottom;
+	int32_t clock_bottom =
+		snap(clock, step) + round_up(theme.clock_height, step);
+	if (login < clock_bottom) {
+		login = clock_bottom;
 	}
-	int32_t h = part == UI_CLOCK ? theme.clock_height : theme.login_height;
+	int32_t y = part == UI_CLOCK ? clock : login;
+	int32_t h = part == UI_CLOCK ? theme.clock_height
+				     : theme.login_height - skip;
 	*rect = (struct ui_rect){
 		.x = snap((width - w) / 2, step),
 		.y = snap(y, step),
@@ -271,12 +291,13 @@ static bool draw_avatar(struct ui *ui, cairo_t *cr, int32_t width) {
 }
 
 // logical, inside the login part
-static struct ui_rect field_rect(const struct ui_rect *part) {
+static struct ui_rect field_rect(
+	const struct config *config, const struct ui_rect *part) {
 	int32_t width = part->width < theme.field_width ? part->width
 							: theme.field_width;
 	return (struct ui_rect){
 		.x = (part->width - width) / 2,
-		.y = theme.field_top,
+		.y = theme.field_top - login_skip(config),
 		.width = width,
 		.height = theme.field_height,
 	};
@@ -342,7 +363,7 @@ static void draw_field(struct ui *ui, cairo_t *cr, const struct ui_rect *part) {
 	const struct config *config = content->config;
 	uint32_t scale = ui->scale;
 	double s = scale_factor(scale);
-	struct ui_rect f = field_rect(part);
+	struct ui_rect f = field_rect(config, part);
 	double left = scale_physical(scale, f.x);
 	double top = scale_physical(scale, f.y);
 	double right = scale_physical(scale, f.x + f.width);
@@ -394,7 +415,8 @@ static void draw_status(struct ui *ui, cairo_t *cr, int32_t width) {
 		break;
 	}
 	text_set(ui->status, text);
-	draw_line(ui, cr, ui->status, width, theme.status_centre);
+	draw_line(ui, cr, ui->status, width,
+		theme.status_centre - login_skip(config));
 }
 
 static bool draw_login(
@@ -434,7 +456,7 @@ bool ui_hits_eye(
 	if (!ui->content->config->input.reveal_toggle) {
 		return false;
 	}
-	struct ui_rect f = field_rect(rect);
+	struct ui_rect f = field_rect(ui->content->config, rect);
 	return x >= f.x + f.width - theme.eye_hit && x < f.x + f.width &&
 	       y >= f.y && y < f.y + f.height;
 }

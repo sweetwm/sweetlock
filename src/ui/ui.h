@@ -71,8 +71,8 @@ void ui_content_finish(struct ui_content *content);
 
 bool ui_shows(const struct ui_content *content, enum ui_part part);
 
-bool ui_place(enum ui_part part, int32_t width, int32_t height, uint32_t scale,
-	struct ui_rect *rect);
+bool ui_place(const struct ui_content *content, enum ui_part part,
+	int32_t width, int32_t height, uint32_t scale, struct ui_rect *rect);
 
 // the first call loads fontconfig, the slowest step in the program
 struct ui *ui_create(const struct ui_content *content, uint32_t scale);

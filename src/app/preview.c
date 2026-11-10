@@ -18,7 +18,7 @@ static bool draw_part(struct ui *ui, enum ui_part part, cairo_t *cr,
 	int32_t width, int32_t height) {
 	struct ui_rect rect;
 	if (!ui_shows(ui->content, part) ||
-		!ui_place(part, width, height, ui->scale, &rect)) {
+		!ui_place(ui->content, part, width, height, ui->scale, &rect)) {
 		return true;
 	}
 	int32_t physical_width = scale_physical(ui->scale, rect.width);
