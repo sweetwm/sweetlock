@@ -8,11 +8,7 @@ build=${BUILD:-build}
 
 ./scripts/format check
 
-if [ -d "$build" ]; then
-	meson setup --reconfigure "$build" --werror
-else
-	meson setup "$build" --werror
-fi
+meson setup --reconfigure "$build" --werror
 
 ninja -C "$build"
 

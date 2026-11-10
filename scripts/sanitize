@@ -3,13 +3,8 @@ set -eu
 
 cd "$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)"
 
-if [ -d build-asan ]; then
-	meson setup --reconfigure build-asan --werror \
-		-Db_sanitize=address,undefined -Db_lundef=false
-else
-	meson setup build-asan --werror \
-		-Db_sanitize=address,undefined -Db_lundef=false
-fi
+meson setup --reconfigure build-asan --werror \
+	-Db_sanitize=address,undefined -Db_lundef=false
 
 ninja -C build-asan
 

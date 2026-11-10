@@ -8,11 +8,7 @@ if ! command -v valgrind >/dev/null 2>&1; then
 	exit 127
 fi
 
-if [ -d build-valgrind ]; then
-	meson setup --reconfigure build-valgrind --werror -Dbuildtype=debug
-else
-	meson setup build-valgrind --werror -Dbuildtype=debug
-fi
+meson setup --reconfigure build-valgrind --werror -Dbuildtype=debug
 
 ninja -C build-valgrind
 

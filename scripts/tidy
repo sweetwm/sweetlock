@@ -5,11 +5,7 @@ cd "$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)"
 
 build=${BUILD:-build}
 
-if [ -d "$build" ]; then
-	meson setup --reconfigure "$build" --werror
-else
-	meson setup "$build" --werror
-fi
+meson setup --reconfigure "$build" --werror
 ninja -C "$build"
 
 files=$(find src -type f -name '*.c' -print)
