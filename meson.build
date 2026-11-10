@@ -110,6 +110,8 @@ executable(
 	'src/ui/clock.c',
 	'src/ui/field.c',
 	'src/ui/status.c',
+	'src/ui/draw.c',
+	'src/ui/place.c',
 	'src/ui/ui.c',
 	'src/ui/user.c',
 	'src/utf8.c',
