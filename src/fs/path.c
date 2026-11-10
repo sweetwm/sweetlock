@@ -18,6 +18,20 @@ const char *path_home(void) {
 	return home && home[0] == '/' ? home : NULL;
 }
 
+// the XDG spec ignores relative values
+bool path_xdg(char out[PATH_MAX], const char *env, const char *fallback) {
+	const char *xdg = getenv(env);
+	if (xdg && xdg[0] == '/') {
+		return path_join(out, xdg, "");
+	}
+	const char *home = path_home();
+	if (!home) {
+		out[0] = '\0';
+		return false;
+	}
+	return path_join(out, home, fallback);
+}
+
 // the schema only lets through empty, absolute and ~/ paths
 bool path_expand(char out[PATH_MAX], const char *configured, const char **why) {
 	out[0] = '\0';
