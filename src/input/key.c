@@ -6,20 +6,10 @@
 #include "utf8.h"
 
 // control characters, Ctrl+letter among them, never go into a password
-static bool is_text(const char *text, size_t length) {
-	for (size_t i = 0; i < length; i++) {
-		unsigned char byte = (unsigned char)text[i];
-		if (byte < 0x20 || byte == 0x7f) {
-			return false;
-		}
-	}
-	return length > 0;
-}
-
 static enum key_action take(
 	enum key_action action, int length, char *text, size_t size) {
-	if (length < 0 || (size_t)length >= size ||
-		!is_text(text, (size_t)length)) {
+	if (length <= 0 || (size_t)length >= size ||
+		!utf8_is_plain(text, (size_t)length)) {
 		explicit_bzero(text, size);
 		return KEY_NONE;
 	}
