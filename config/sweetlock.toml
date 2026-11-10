@@ -79,6 +79,8 @@ enabled = true
 format = "%A, %B %-d"
 
 [avatar]
+# With the avatar and the username both off, the clock and date take their
+# place above the password field
 enabled = true
 # A PNG or JPEG, as an absolute path or one starting with ~/ (up to 4095 bytes;
 # relative paths are rejected). Empty: the

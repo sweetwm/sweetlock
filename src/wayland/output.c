@@ -309,8 +309,8 @@ static bool place(struct output *output) {
 	for (int i = 0; i < UI_PARTS; i++) {
 		struct ui_rect rect;
 		if (output->panels[i] &&
-			(!ui_place((enum ui_part)i, output->width,
-				 output->height, scale, &rect) ||
+			(!ui_place(output->ui->content, (enum ui_part)i,
+				 output->width, output->height, scale, &rect) ||
 				!panel_place(output->panels[i], &rect, scale,
 					&moved))) {
 			return false;
