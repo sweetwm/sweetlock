@@ -17,15 +17,9 @@ enum {
 	MESSAGE_ERROR = 'e',
 };
 
-enum message_kind {
-	MESSAGE_KIND_SUCCESS,
-	MESSAGE_KIND_FAILURE,
-	MESSAGE_KIND_INFO,
-	MESSAGE_KIND_ERROR,
-};
-
 struct message_reply {
-	enum message_kind kind;
+	// the wire byte, 0 for a reply that is not valid
+	char kind;
 	// inside the packet, not terminated; empty for a verdict
 	const char *text;
 	size_t length;

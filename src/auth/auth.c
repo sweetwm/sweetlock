@@ -131,8 +131,8 @@ bool auth_submit(struct auth *auth, const struct password *password) {
 }
 
 static void keep_notice(struct auth *auth, const struct message_reply *reply) {
-	auth->notice = reply->kind == MESSAGE_KIND_INFO ? AUTH_NOTICE_INFO
-							: AUTH_NOTICE_ERROR;
+	auth->notice = reply->kind == MESSAGE_INFO ? AUTH_NOTICE_INFO
+						   : AUTH_NOTICE_ERROR;
 	memcpy(auth->notice_text, reply->text, reply->length);
 	auth->notice_text[reply->length] = '\0';
 }
@@ -177,8 +177,8 @@ enum auth_result auth_read(struct auth *auth) {
 		// the helper warns about its setup before any attempt
 		struct message_reply reply;
 		bool valid = message_reply(packet, (size_t)size, &reply);
-		if (valid && (reply.kind == MESSAGE_KIND_INFO ||
-				     reply.kind == MESSAGE_KIND_ERROR)) {
+		if (valid && (reply.kind == MESSAGE_INFO ||
+				     reply.kind == MESSAGE_ERROR)) {
 			keep_notice(auth, &reply);
 			result = AUTH_NOTICE;
 			continue;
@@ -194,7 +194,7 @@ enum auth_result auth_read(struct auth *auth) {
 			log_error("the PAM helper sent a malformed reply");
 		}
 		end_attempt(auth);
-		bool success = valid && reply.kind == MESSAGE_KIND_SUCCESS;
+		bool success = valid && reply.kind == MESSAGE_SUCCESS;
 		log_info("authentication %s", success ? "succeeded" : "failed");
 		return success ? AUTH_SUCCESS : AUTH_FAILURE;
 	}

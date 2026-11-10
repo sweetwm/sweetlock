@@ -15,18 +15,18 @@ bool message_request(const char *data, size_t size, size_t *length) {
 }
 
 bool message_reply(const char *data, size_t size, struct message_reply *reply) {
+	*reply = (struct message_reply){0};
 	if (size == 0 || size > MESSAGE_REPLY_MAX) {
 		return false;
 	}
-	*reply = (struct message_reply){.text = data + 1};
-	if (size == 1) {
-		reply->kind = data[0] == MESSAGE_SUCCESS ? MESSAGE_KIND_SUCCESS
-							 : MESSAGE_KIND_FAILURE;
-		return data[0] == MESSAGE_SUCCESS || data[0] == MESSAGE_FAILURE;
+	char kind = data[0];
+	bool valid =
+		size == 1 ? kind == MESSAGE_SUCCESS || kind == MESSAGE_FAILURE
+			  : (kind == MESSAGE_INFO || kind == MESSAGE_ERROR) &&
+				    utf8_is_plain(data + 1, size - 1);
+	if (valid) {
+		*reply = (struct message_reply){
+			.kind = kind, .text = data + 1, .length = size - 1};
 	}
-	reply->kind = data[0] == MESSAGE_INFO ? MESSAGE_KIND_INFO
-					      : MESSAGE_KIND_ERROR;
-	reply->length = size - 1;
-	return (data[0] == MESSAGE_INFO || data[0] == MESSAGE_ERROR) &&
-	       utf8_is_plain(reply->text, reply->length);
+	return valid;
 }
