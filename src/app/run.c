@@ -3,15 +3,12 @@
 #include <errno.h>
 #include <malloc.h>
 #include <poll.h>
-#include <signal.h>
 #include <stdlib.h>
-#include <string.h>
-#include <sys/prctl.h>
-#include <sys/signalfd.h>
 #include <unistd.h>
 #include <wayland-client.h>
 
 #include "app/screen.h"
+#include "app/signals.h"
 #include "app/worker.h"
 #include "auth/auth.h"
 #include "input/input.h"
@@ -64,66 +61,9 @@ struct app {
 	int locked_fd;
 };
 
-enum signal_action {
-	SIGNAL_NONE,
-	SIGNAL_UNLOCK,
-	SIGNAL_EXIT,
-};
-
-static void signal_set(sigset_t *set) {
-	sigemptyset(set);
-	sigaddset(set, SIGHUP);
-	sigaddset(set, SIGTERM);
-	sigaddset(set, SIGINT);
-	sigaddset(set, SIGUSR1);
-}
-
-bool app_protect(void) {
-	if (prctl(PR_SET_DUMPABLE, 0, 0, 0, 0) != 0) {
-		log_error("failed to make the process undumpable: %m");
-		return false;
-	}
-	// stderr may be a pipe whose reader is gone; the helper inherits this
-	struct sigaction ignore = {.sa_handler = SIG_IGN};
-	if (sigaction(SIGPIPE, &ignore, NULL) != 0) {
-		log_error("failed to ignore SIGPIPE: %m");
-		return false;
-	}
-	sigset_t set;
-	signal_set(&set);
-	if (sigprocmask(SIG_BLOCK, &set, NULL) != 0) {
-		log_error("failed to block signals: %m");
-		return false;
-	}
-	return true;
-}
-
-// SIGTERM and SIGINT exit and leave the session locked, as the protocol
-// requires, SIGHUP only means the terminal that started us is gone
-static enum signal_action read_signals(int fd) {
-	enum signal_action action = SIGNAL_NONE;
-	struct signalfd_siginfo info;
-	while (read(fd, &info, sizeof info) == (ssize_t)sizeof info) {
-		const char *name = sigabbrev_np((int)info.ssi_signo);
-		if (info.ssi_signo == SIGUSR1) {
-			log_info("received SIGUSR1; unlocking");
-			if (action == SIGNAL_NONE) {
-				action = SIGNAL_UNLOCK;
-			}
-		} else if (info.ssi_signo == SIGHUP) {
-			log_info("received SIGHUP; staying locked");
-		} else {
-			log_info("received SIG%s; exiting without unlocking",
-				name ? name : "?");
-			action = SIGNAL_EXIT;
-		}
-	}
-	return action;
-}
-
 // false when a signal asks the loop to exit
 static bool handle_signals(struct display *display, int fd) {
-	enum signal_action action = read_signals(fd);
+	enum signal_action action = signals_read(fd);
 	if (action == SIGNAL_UNLOCK) {
 		lock_unlock(&display->lock);
 	}
@@ -364,17 +304,6 @@ lost:
 	return EXIT_FAILURE;
 }
 
-static bool open_signals(struct app *app) {
-	sigset_t set;
-	signal_set(&set);
-	app->signal_fd = signalfd(-1, &set, SFD_CLOEXEC | SFD_NONBLOCK);
-	if (app->signal_fd < 0) {
-		log_error("failed to monitor signals: %m");
-		return false;
-	}
-	return true;
-}
-
 int app_run(const struct config *config, const char *notice,
 	const struct timespec *start, int locked_fd) {
 	struct app app = {
@@ -392,8 +321,9 @@ int app_run(const struct config *config, const char *notice,
 	int status = EXIT_FAILURE;
 	// one lookup for PAM and the UI, since with sssd or LDAP it can be slow
 	user_lookup(&app.user, config->username.text);
-	if (auth_start(&app.auth, app.user.login) && open_signals(&app) &&
-		field_init(&app.field) && input_init(&app.input, &app.auth) &&
+	if (auth_start(&app.auth, app.user.login) &&
+		signals_open(&app.signal_fd) && field_init(&app.field) &&
+		input_init(&app.input, &app.auth) &&
 		screen_init(&app.screen, config->screen_off.timeout) &&
 		display_connect(&app.display, config, &app.input) &&
 		display_lock(&app.display, start)) {
