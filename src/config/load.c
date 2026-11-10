@@ -5,22 +5,9 @@
 
 #include "config/config.h"
 #include "fs/file.h"
+#include "fs/path.h"
 #include "log.h"
 #include "utf8.h"
-
-static bool default_path(char *path, size_t size) {
-	int length = -1;
-	const char *xdg = getenv("XDG_CONFIG_HOME");
-	const char *home = getenv("HOME");
-	// the XDG spec ignores relative values
-	if (xdg && xdg[0] == '/') {
-		length = snprintf(path, size, "%s/sweetlock/config.toml", xdg);
-	} else if (home && home[0] == '/') {
-		length = snprintf(
-			path, size, "%s/.config/sweetlock/config.toml", home);
-	}
-	return length > 0 && (size_t)length < size;
-}
 
 static bool load_file(struct config *config, const char *path, bool explicit,
 	char notice[static CONFIG_NOTICE_SIZE]) {
@@ -65,8 +52,10 @@ bool config_load(struct config *config, const char *path, bool no_config,
 	if (path) {
 		return load_file(config, path, true, notice);
 	}
+	char base[PATH_MAX];
 	char found[PATH_MAX];
-	if (!default_path(found, sizeof found)) {
+	if (!path_xdg(base, "XDG_CONFIG_HOME", "/.config") ||
+		!path_join(found, base, "/sweetlock/config.toml")) {
 		log_warn("neither XDG_CONFIG_HOME nor HOME is an absolute "
 			 "path; using defaults");
 		return true;

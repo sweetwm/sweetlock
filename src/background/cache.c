@@ -7,10 +7,11 @@
 #include <inttypes.h>
 #include <limits.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
+
+#include "fs/path.h"
 
 enum {
 	MAGIC_SIZE = 8,
@@ -110,20 +111,10 @@ static bool make_dir(const char *path, char *error, size_t size) {
 }
 
 int cache_open(char *error, size_t error_size) {
-	const char *xdg = getenv("XDG_CACHE_HOME");
-	const char *home = getenv("HOME");
 	char base[PATH_MAX];
 	char path[PATH_MAX];
-	int length = -1;
-	// the XDG spec ignores relative values
-	if (xdg && xdg[0] == '/') {
-		length = snprintf(base, sizeof base, "%s", xdg);
-	} else if (home && home[0] == '/') {
-		length = snprintf(base, sizeof base, "%s/.cache", home);
-	}
-	if (length <= 0 || (size_t)length >= sizeof base ||
-		snprintf(path, sizeof path, "%s/sweetlock", base) >=
-			(int)sizeof path) {
+	if (!path_xdg(base, "XDG_CACHE_HOME", "/.cache") ||
+		!path_join(path, base, "/sweetlock")) {
 		snprintf(error, error_size,
 			"neither XDG_CACHE_HOME nor HOME is a usable absolute "
 			"path");
