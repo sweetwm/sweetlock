@@ -261,8 +261,7 @@ void output_show_background(
 			content->config, content->worker, width, height, scale);
 		wanted = output->backdrop;
 	}
-	if (!wanted || wanted->state != BACKDROP_READY ||
-		output->shown == wanted) {
+	if (!wanted || !wanted->ready || output->shown == wanted) {
 		return;
 	}
 	wl_surface_attach(output->surface, wanted->buffer->wl, 0, 0);
