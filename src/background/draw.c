@@ -133,9 +133,12 @@ static void draw_mode(cairo_t *cr, const struct config *config,
 	case BACKGROUND_IMAGE:
 		break;
 	}
-	struct color c = config->background.color;
-	cairo_set_source_rgb(
-		cr, channel(c.red), channel(c.green), channel(c.blue));
+	background_fill(cr, config->background.color);
+}
+
+void background_fill(cairo_t *cr, struct color color) {
+	cairo_set_source_rgb(cr, channel(color.red), channel(color.green),
+		channel(color.blue));
 	cairo_paint(cr);
 }
 

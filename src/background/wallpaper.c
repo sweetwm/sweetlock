@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 #include "background/blur.h"
+#include "background/draw.h"
 #include "image/image.h"
 #include "wayland/scale.h"
 
@@ -41,10 +42,6 @@ static struct placement place(enum background_fit fit, double image_width,
 	};
 }
 
-static double channel(uint8_t value) {
-	return value / 255.0;
-}
-
 static void cover(cairo_t *cr, const struct placement *at, double width,
 	double height, double output_width, double output_height) {
 	const double far = 1 << 20;
@@ -62,11 +59,8 @@ static bool compose(cairo_surface_t *canvas, cairo_surface_t *image,
 	cairo_surface_t *target) {
 	int width = cairo_image_surface_get_width(image);
 	int height = cairo_image_surface_get_height(image);
-	struct color c = config->background.color;
 	cairo_t *cr = cairo_create(canvas);
-	cairo_set_source_rgb(
-		cr, channel(c.red), channel(c.green), channel(c.blue));
-	cairo_paint(cr);
+	background_fill(cr, config->background.color);
 	cairo_scale(cr, 1.0 / factor, 1.0 / factor);
 	cairo_translate(cr, at->x, at->y);
 	// a JPEG may have been decoded smaller than its size
