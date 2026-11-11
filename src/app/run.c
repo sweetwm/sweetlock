@@ -177,7 +177,9 @@ static void report_locked(struct app *app) {
 	}
 }
 
-static void start_ui(struct app *app) {
+// started with the lock request, so a cached background is read while the
+// compositor confirms the lock
+static void start_worker(struct app *app) {
 	(void)mallopt(M_MMAP_THRESHOLD, 1 << 20);
 	worker_start(&app->worker);
 	app->content = (struct ui_content){
@@ -189,6 +191,9 @@ static void start_ui(struct app *app) {
 		.user = &app->user,
 		.notice = app->notice,
 	};
+}
+
+static void start_ui(struct app *app) {
 	display_show_backgrounds(&app->display, &app->content);
 	ui_content_start(&app->content, &app->clock);
 	screen_start(&app->screen, &app->display, &app->input);
@@ -198,6 +203,10 @@ static void start_ui(struct app *app) {
 // drawing from the loop makes a burst of events cost one frame
 static void render(struct app *app) {
 	struct display *display = &app->display;
+	// a background ready before locked can be the first frame shown
+	if (display->lock.state == LOCK_REQUESTED) {
+		display_show_backgrounds(display, &app->content);
+	}
 	if (display->lock.state != LOCK_LOCKED) {
 		return;
 	}
@@ -335,6 +344,7 @@ int app_run(const struct config *config, const char *notice,
 		display_lock(&app.display, start)) {
 		wl_display_flush(app.display.wl);
 		text_prepare();
+		start_worker(&app);
 		status = run(&app);
 	}
 	// the worker first: it may be drawing into a backdrop's buffer
