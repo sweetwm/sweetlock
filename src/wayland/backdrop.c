@@ -36,7 +36,7 @@ struct backdrop *backdrop_get(struct display *display,
 	if (!backdrop->buffer) {
 		return backdrop;
 	}
-	if (!worker || !worker->started) {
+	if (!worker || worker->fd < 0) {
 		log_warn("no render worker; the background stays the base "
 			 "colour");
 		return backdrop;

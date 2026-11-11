@@ -49,7 +49,6 @@ bool worker_start(struct worker *worker) {
 		*worker = (struct worker){.fd = -1};
 		return false;
 	}
-	worker->started = true;
 	return true;
 }
 
@@ -77,7 +76,7 @@ struct worker_job *worker_collect(struct worker *worker) {
 }
 
 void worker_stop(struct worker *worker) {
-	if (!worker->started) {
+	if (worker->fd < 0) {
 		return;
 	}
 	pthread_mutex_lock(&worker->lock);
