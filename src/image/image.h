@@ -6,8 +6,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "fs/file.h"
-
 enum {
 	IMAGE_FILE_MAX = 64 * 1024 * 1024,
 	IMAGE_SIDE_MAX = 32767,
@@ -37,9 +35,9 @@ enum image_format image_probe(const unsigned char *data, size_t length,
 cairo_surface_t *image_decode(const unsigned char *data, size_t length,
 	double fraction, char *error, size_t error_size);
 
-// image_decode of a file, with its shorter side at least side where the
-// format can decode smaller
-enum file_result image_load(const char *path, uint32_t side,
-	cairo_surface_t **image, char *error, size_t error_size);
+// image_decode with the shorter side at least side where the format can
+// decode smaller
+cairo_surface_t *image_decode_side(const unsigned char *data, size_t length,
+	uint32_t side, char *error, size_t error_size);
 
 #endif

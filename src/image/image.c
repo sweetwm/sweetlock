@@ -2,7 +2,6 @@
 
 #include <inttypes.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include "image/jpeg.h"
@@ -152,24 +151,12 @@ cairo_surface_t *image_decode(const unsigned char *data, size_t length,
 		data, length, width, height, fraction, error, error_size);
 }
 
-enum file_result image_load(const char *path, uint32_t side,
-	cairo_surface_t **image, char *error, size_t error_size) {
-	*image = NULL;
-	char *data = NULL;
-	size_t length = 0;
-	enum file_result result = file_read(
-		path, IMAGE_FILE_MAX, &data, &length, error, error_size);
-	if (result == FILE_OK) {
-		uint32_t width = 0;
-		uint32_t height = 0;
-		image_probe(
-			(const unsigned char *)data, length, &width, &height);
-		uint32_t shorter = width < height ? width : height;
-		double fraction = shorter > side ? (double)side / shorter : 1;
-		*image = image_decode((const unsigned char *)data, length,
-			fraction, error, error_size);
-		result = *image ? FILE_OK : FILE_FAILED;
-	}
-	free(data);
-	return result;
+cairo_surface_t *image_decode_side(const unsigned char *data, size_t length,
+	uint32_t side, char *error, size_t error_size) {
+	uint32_t width = 0;
+	uint32_t height = 0;
+	image_probe(data, length, &width, &height);
+	uint32_t shorter = width < height ? width : height;
+	double fraction = shorter > side ? (double)side / shorter : 1;
+	return image_decode(data, length, fraction, error, error_size);
 }
