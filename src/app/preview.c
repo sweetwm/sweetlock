@@ -152,6 +152,7 @@ int app_preview(const struct config *config, const char *notice,
 		.notice = notice,
 	};
 	ui_content_start(&content, &clock);
+	ui_content_load_avatar(&content);
 	int status = write_png(&content, preview);
 	ui_content_finish(&content);
 	clock_stop(&clock);

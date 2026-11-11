@@ -70,12 +70,16 @@ void ui_content_start(struct ui_content *content, struct clock *clock) {
 	if ((time || date) && !clock_start(clock, time, date)) {
 		log_warn("showing no clock");
 	}
+	if (config->input.layout == LAYOUT_CORNER) {
+		load_layouts(content);
+	}
+}
+
+void ui_content_load_avatar(struct ui_content *content) {
+	const struct config *config = content->config;
 	if (config->avatar.enabled) {
 		avatar_load(&content->avatar, config->avatar.path,
 			content->user->login, content->worker);
-	}
-	if (config->input.layout == LAYOUT_CORNER) {
-		load_layouts(content);
 	}
 }
 
