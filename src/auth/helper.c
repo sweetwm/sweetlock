@@ -198,12 +198,6 @@ static void serve(
 	}
 }
 
-// PAM modules see only stdio and the socket, and the -f report socket must
-// close when the locker exits
-static void close_inherited(void) {
-	close_range(HELPER_FD + 1, ~0U, 0);
-}
-
 // the socket the locker made, so the locker is still its parent; programs
 // PAM runs do not get it
 static bool from_parent(void) {
@@ -221,7 +215,9 @@ static bool from_parent(void) {
 }
 
 _Noreturn void helper_main(const char *user) {
-	close_inherited();
+	// PAM modules see only stdio and the socket; a failure is ignored, as a
+	// helper that refuses to start leaves no way to unlock
+	(void)close_range(HELPER_FD + 1, ~0U, 0);
 	// SIGTERM stays blocked across exec as in the parent, so only SIGKILL
 	// works
 	if (prctl(PR_SET_DUMPABLE, 0, 0, 0, 0) != 0 ||
