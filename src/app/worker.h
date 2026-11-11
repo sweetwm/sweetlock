@@ -13,7 +13,6 @@ struct worker_job {
 // the one helper thread: decodes and renders off the main loop
 struct worker {
 	int fd;
-	bool started;
 	bool stopping;
 	pthread_t thread;
 	pthread_mutex_t lock;
@@ -22,6 +21,7 @@ struct worker {
 	struct worker_job *done;
 };
 
+// fd is -1 until this succeeds, and again after worker_stop
 bool worker_start(struct worker *worker);
 
 // jobs run in the order they were submitted

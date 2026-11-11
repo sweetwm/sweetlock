@@ -82,7 +82,7 @@ void avatar_load(struct avatar *avatar, const char *configured,
 	set_paths(avatar, configured, login);
 	if (!worker) {
 		run(&avatar->job);
-	} else if (worker->started) {
+	} else if (worker->fd >= 0) {
 		worker_submit(worker, &avatar->job);
 		return;
 	}
