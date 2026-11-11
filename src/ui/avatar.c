@@ -99,7 +99,7 @@ void avatar_finish(struct avatar *avatar) {
 	if (avatar->image) {
 		log_info("avatar from %s", avatar->paths[avatar->source]);
 	}
-	avatar->state = avatar->image ? AVATAR_IMAGE : AVATAR_FALLBACK;
+	avatar->loaded = true;
 }
 
 void avatar_destroy(struct avatar *avatar) {
