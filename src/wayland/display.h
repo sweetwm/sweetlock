@@ -45,6 +45,8 @@ bool display_connect(struct display *display, const struct config *config,
 // requests the lock and a lock surface for every output
 bool display_lock(struct display *display, const struct timespec *start);
 
+bool display_mapped(const struct display *display);
+
 // starts and shows every mapped output's generated background
 void display_show_backgrounds(
 	struct display *display, const struct ui_content *content);

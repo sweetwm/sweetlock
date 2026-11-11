@@ -76,6 +76,9 @@ struct ui {
 
 void ui_content_start(struct ui_content *content, struct clock *clock);
 
+// once per lock, on the worker when content has one
+void ui_content_load_avatar(struct ui_content *content);
+
 // after the worker has stopped
 void ui_content_finish(struct ui_content *content);
 

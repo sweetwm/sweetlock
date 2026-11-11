@@ -56,6 +56,7 @@ struct app {
 	struct user user;
 	struct ui_content content;
 	enum ui_stage stage;
+	bool avatar_requested;
 	int signal_fd;
 	// -f only: reported and closed once the lock is confirmed
 	int locked_fd;
@@ -193,8 +194,17 @@ static void start_worker(struct app *app) {
 	};
 }
 
+// after the backgrounds, so their jobs reach the worker first
+static void load_avatar(struct app *app) {
+	if (!app->avatar_requested) {
+		ui_content_load_avatar(&app->content);
+		app->avatar_requested = true;
+	}
+}
+
 static void start_ui(struct app *app) {
 	display_show_backgrounds(&app->display, &app->content);
+	load_avatar(app);
 	ui_content_start(&app->content, &app->clock);
 	screen_start(&app->screen, &app->display, &app->input);
 	app->stage = STAGE_STARTED;
@@ -206,6 +216,9 @@ static void render(struct app *app) {
 	// a background ready before locked can be the first frame shown
 	if (display->lock.state == LOCK_REQUESTED) {
 		display_show_backgrounds(display, &app->content);
+		if (display_mapped(display)) {
+			load_avatar(app);
+		}
 	}
 	if (display->lock.state != LOCK_LOCKED) {
 		return;

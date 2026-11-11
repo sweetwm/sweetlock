@@ -228,6 +228,16 @@ bool display_lock(struct display *display, const struct timespec *start) {
 	return true;
 }
 
+bool display_mapped(const struct display *display) {
+	const struct output *output = NULL;
+	wl_list_for_each(output, &display->outputs, link) {
+		if (output->mapped) {
+			return true;
+		}
+	}
+	return false;
+}
+
 void display_show_backgrounds(
 	struct display *display, const struct ui_content *content) {
 	struct output *output = NULL;
