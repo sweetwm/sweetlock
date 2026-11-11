@@ -27,19 +27,12 @@ static void add_u64(struct cache_key *key, uint64_t value) {
 	cache_key_add(key, (uint32_t)(value >> 32));
 }
 
-// FNV-1a; the inode already tells files apart
-static uint64_t hash(const char *text) {
-	uint64_t h = 0xcbf29ce484222325u;
-	for (; *text; text++) {
-		h = (h ^ (unsigned char)*text) * 0x100000001b3u;
-	}
-	return h;
-}
-
 static void add_image(struct cache_key *key, const struct config *config,
 	uint32_t scale, const struct stat *file) {
 	add_color(key, config->background.color);
-	add_u64(key, hash(config->background.image.path));
+	const char *path = config->background.image.path;
+	// the inode already tells files apart
+	add_u64(key, cache_hash(path, strlen(path)));
 	add_u64(key, file ? (uint64_t)file->st_dev : 0);
 	add_u64(key, file ? (uint64_t)file->st_ino : 0);
 	add_u64(key, file ? (uint64_t)file->st_size : 0);
