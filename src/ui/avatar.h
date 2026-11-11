@@ -3,6 +3,7 @@
 
 #include <cairo.h>
 #include <limits.h>
+#include <stdbool.h>
 
 #include "app/worker.h"
 
@@ -13,15 +14,9 @@ enum {
 	AVATAR_ERROR_SIZE = 256,
 };
 
-enum avatar_state {
-	AVATAR_LOADING,
-	AVATAR_IMAGE,
-	AVATAR_FALLBACK,
-};
-
 struct avatar {
 	struct worker_job job;
-	enum avatar_state state;
+	bool loaded;
 	cairo_surface_t *image;
 	int source;
 	char paths[AVATAR_SOURCES][PATH_MAX];

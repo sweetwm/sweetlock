@@ -75,10 +75,11 @@ static bool draw_avatar(struct ui *ui, cairo_t *cr, int32_t width) {
 	set_source(cr, content->config->theme.field);
 	cairo_arc(cr, x + radius, y + radius, radius, 0, 2 * M_PI);
 	cairo_fill(cr);
-	if (avatar->state == AVATAR_FALLBACK) {
+	// the worker writes image, so read it only once the job is back
+	if (avatar->loaded && !avatar->image) {
 		set_source(cr, content->config->theme.foreground);
 		icon_person(cr, x + radius, y + radius, radius);
-	} else if (avatar->state == AVATAR_IMAGE) {
+	} else if (avatar->loaded) {
 		if (!ui->avatar) {
 			ui->avatar = round_avatar(avatar->image, size);
 		}
