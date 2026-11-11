@@ -1,4 +1,4 @@
-#include "background/cache.h"
+#include "cache/cache.h"
 
 #include <assert.h>
 #include <dirent.h>
@@ -44,6 +44,19 @@ void cache_key_add(struct cache_key *key, uint32_t value) {
 	assert(key->length + 4 <= CACHE_KEY_MAX);
 	put_u32(key->bytes + key->length, value);
 	key->length += 4;
+}
+
+void cache_key_add_u64(struct cache_key *key, uint64_t value) {
+	cache_key_add(key, (uint32_t)value);
+	cache_key_add(key, (uint32_t)(value >> 32));
+}
+
+void cache_key_add_file(struct cache_key *key, const struct stat *file) {
+	cache_key_add_u64(key, file ? (uint64_t)file->st_dev : 0);
+	cache_key_add_u64(key, file ? (uint64_t)file->st_ino : 0);
+	cache_key_add_u64(key, file ? (uint64_t)file->st_size : 0);
+	cache_key_add_u64(key, file ? (uint64_t)file->st_mtim.tv_sec : 0);
+	cache_key_add(key, file ? (uint32_t)file->st_mtim.tv_nsec : 0);
 }
 
 bool cache_header_parse(

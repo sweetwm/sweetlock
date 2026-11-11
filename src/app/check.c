@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 #include "auth/service.h"
+#include "fs/file.h"
 #include "fs/path.h"
 #include "image/image.h"
 #include "input/layout.h"

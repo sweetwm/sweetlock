@@ -1,9 +1,10 @@
-#ifndef SWEETLOCK_BACKGROUND_CACHE_H
-#define SWEETLOCK_BACKGROUND_CACHE_H
+#ifndef SWEETLOCK_CACHE_CACHE_H
+#define SWEETLOCK_CACHE_CACHE_H
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <sys/stat.h>
 
 enum {
 	CACHE_KEY_MAX = 256,
@@ -44,6 +45,11 @@ enum cache_result {
 };
 
 void cache_key_add(struct cache_key *key, uint32_t value);
+
+void cache_key_add_u64(struct cache_key *key, uint64_t value);
+
+// what tells a source file and its version apart; zeros without one
+void cache_key_add_file(struct cache_key *key, const struct stat *file);
 
 uint64_t cache_hash(const void *data, size_t length);
 

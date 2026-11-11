@@ -106,8 +106,10 @@ static void collect(struct app *app) {
 		// a background job may go straight back to the worker
 		struct worker_job *next = job->next;
 		if (job == &app->content.avatar.job) {
-			avatar_finish(&app->content.avatar);
-			display_mark_dirty(&app->display, UI_LOGIN);
+			if (avatar_collect(
+				    &app->content.avatar, &app->worker)) {
+				display_mark_dirty(&app->display, UI_LOGIN);
+			}
 		} else {
 			backdrop_collect(&app->display, &app->worker, job);
 		}

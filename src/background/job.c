@@ -22,22 +22,13 @@ static void add_int(struct cache_key *key, int32_t value) {
 	cache_key_add(key, (uint32_t)value);
 }
 
-static void add_u64(struct cache_key *key, uint64_t value) {
-	cache_key_add(key, (uint32_t)value);
-	cache_key_add(key, (uint32_t)(value >> 32));
-}
-
 static void add_image(struct cache_key *key, const struct config *config,
 	uint32_t scale, const struct stat *file) {
 	add_color(key, config->background.color);
 	const char *path = config->background.image.path;
 	// the inode already tells files apart
-	add_u64(key, cache_hash(path, strlen(path)));
-	add_u64(key, file ? (uint64_t)file->st_dev : 0);
-	add_u64(key, file ? (uint64_t)file->st_ino : 0);
-	add_u64(key, file ? (uint64_t)file->st_size : 0);
-	add_u64(key, file ? (uint64_t)file->st_mtim.tv_sec : 0);
-	add_int(key, file ? (int32_t)file->st_mtim.tv_nsec : 0);
+	cache_key_add_u64(key, cache_hash(path, strlen(path)));
+	cache_key_add_file(key, file);
 	add_int(key, (int32_t)config->background.image.fit);
 	add_int(key, config->background.image.dim);
 	add_int(key, config->background.image.blur);
