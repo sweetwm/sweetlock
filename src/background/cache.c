@@ -80,14 +80,21 @@ static size_t header_write(unsigned char *out, const struct cache_key *key,
 	return CACHE_HEADER_SIZE + key->length;
 }
 
-// FNV-1a; a collision only costs a redraw, since the header holds the key
+// FNV-1a
+uint64_t cache_hash(const void *data, size_t length) {
+	const unsigned char *bytes = data;
+	uint64_t hash = 0xcbf29ce484222325u;
+	for (size_t i = 0; i < length; i++) {
+		hash = (hash ^ bytes[i]) * 0x100000001b3u;
+	}
+	return hash;
+}
+
+// a collision only costs a redraw, since the header holds the key
 static void entry_name(
 	const struct cache_key *key, const char *suffix, char name[NAME_SIZE]) {
-	uint64_t hash = 0xcbf29ce484222325u;
-	for (size_t i = 0; i < key->length; i++) {
-		hash = (hash ^ key->bytes[i]) * 0x100000001b3u;
-	}
-	snprintf(name, NAME_SIZE, "%016" PRIx64 "%.4s", hash, suffix);
+	snprintf(name, NAME_SIZE, "%016" PRIx64 "%.4s",
+		cache_hash(key->bytes, key->length), suffix);
 }
 
 static bool is_entry(const char *name) {

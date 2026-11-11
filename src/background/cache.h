@@ -45,6 +45,8 @@ enum cache_result {
 
 void cache_key_add(struct cache_key *key, uint32_t value);
 
+uint64_t cache_hash(const void *data, size_t length);
+
 bool cache_header_parse(
 	const unsigned char *data, size_t length, struct cache_header *header);
 
