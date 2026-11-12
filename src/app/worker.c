@@ -6,6 +6,12 @@
 
 #include "log.h"
 
+static const struct worker stopped = {
+	.fd = -1,
+	.lock = PTHREAD_MUTEX_INITIALIZER,
+	.wake = PTHREAD_COND_INITIALIZER,
+};
+
 static void *work(void *data) {
 	struct worker *worker = data;
 	pthread_mutex_lock(&worker->lock);
@@ -31,22 +37,18 @@ static void *work(void *data) {
 }
 
 bool worker_start(struct worker *worker) {
-	*worker = (struct worker){.fd = -1};
+	*worker = stopped;
 	worker->fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
 	if (worker->fd < 0) {
 		log_error("failed to create the render worker's eventfd: %m");
 		return false;
 	}
-	pthread_mutex_init(&worker->lock, NULL);
-	pthread_cond_init(&worker->wake, NULL);
 	int error = pthread_create(&worker->thread, NULL, work, worker);
 	if (error != 0) {
 		log_error("failed to start the render worker: %s",
 			strerrordesc_np(error));
-		pthread_cond_destroy(&worker->wake);
-		pthread_mutex_destroy(&worker->lock);
 		close(worker->fd);
-		*worker = (struct worker){.fd = -1};
+		*worker = stopped;
 		return false;
 	}
 	return true;
@@ -84,8 +86,6 @@ void worker_stop(struct worker *worker) {
 	pthread_cond_signal(&worker->wake);
 	pthread_mutex_unlock(&worker->lock);
 	pthread_join(worker->thread, NULL);
-	pthread_cond_destroy(&worker->wake);
-	pthread_mutex_destroy(&worker->lock);
 	close(worker->fd);
-	*worker = (struct worker){.fd = -1};
+	*worker = stopped;
 }
