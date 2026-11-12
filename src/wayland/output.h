@@ -43,6 +43,7 @@ struct output {
 	bool relayout;
 	// a broken UI is dropped once and the output stays locked without it
 	bool ui_failed;
+	bool ui_chosen;
 };
 
 // takes ownership of wl, released on failure
@@ -56,7 +57,8 @@ void output_show_background(
 	struct output *output, const struct ui_content *content);
 
 // creates, places and draws the UI once mapped; true when it committed
-bool output_render(struct output *output, const struct ui_content *content);
+bool output_render(
+	struct output *output, const struct ui_content *content, bool shows_ui);
 
 void output_mark_dirty(struct output *output, enum ui_part part);
 

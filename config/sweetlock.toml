@@ -103,6 +103,12 @@ reveal_toggle = true
 # its code (US, LV) in a round badge at the top right of every output
 layout = "status"
 
+[ui]
+# The output that shows the clock and the login, for example "DP-1", the
+# others show only the background. Empty puts them on every output, and so
+# does a name no connected output has.
+output = ""
+
 [screen_off]
 # Seconds without input on the lock screen before every output powers off,
 # up to 3600, for example 60; 0 never. A key or click powers them back on

@@ -172,6 +172,7 @@ bool display_connect(struct display *display, const struct config *config,
 	struct input *input) {
 	*display = (struct display){
 		.input = input,
+		.ui_output = config->ui.output,
 		.power_wanted = config->screen_off.timeout > 0,
 	};
 	wl_list_init(&display->outputs);
@@ -246,11 +247,17 @@ void display_show_backgrounds(
 	}
 }
 
+// a ui.output that names no connected output puts the UI on all of them
 bool display_render(struct display *display, const struct ui_content *content) {
-	bool committed = false;
+	bool chosen = false;
 	struct output *output = NULL;
 	wl_list_for_each(output, &display->outputs, link) {
-		committed |= output_render(output, content);
+		chosen |= output->ui_chosen;
+	}
+	bool committed = false;
+	wl_list_for_each(output, &display->outputs, link) {
+		committed |= output_render(
+			output, content, !chosen || output->ui_chosen);
 	}
 	return committed;
 }
