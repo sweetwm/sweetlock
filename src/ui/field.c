@@ -26,16 +26,17 @@ void field_finish(struct field *field) {
 	*field = (struct field){.timer_fd = -1};
 }
 
-// without the timer the failure just stays on screen
+// a failure that could never end would hold back an empty Enter for good
 void field_fail(struct field *field) {
 	const struct itimerspec spec = {
 		.it_value = {.tv_sec = FIELD_FAILED_MS / 1000,
 			.tv_nsec = (FIELD_FAILED_MS % 1000) * 1000000L},
 	};
-	field->failed = true;
 	if (timerfd_settime(field->timer_fd, 0, &spec, NULL) != 0) {
 		log_warn("failed to time the failed password state: %m");
+		return;
 	}
+	field->failed = true;
 }
 
 void field_expire(struct field *field) {
