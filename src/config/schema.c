@@ -60,6 +60,7 @@ static const struct config defaults = {
 	.input = {.placeholder = "Password",
 		.reveal_toggle = true,
 		.layout = LAYOUT_STATUS},
+	.ui = {.output = ""},
 	.theme =
 		{
 			.font = "sans-serif",
@@ -130,6 +131,7 @@ static const struct config_key keys[] = {
 	KEY("input.placeholder", CONFIG_STRING, input.placeholder),
 	KEY("input.reveal_toggle", CONFIG_BOOL, input.reveal_toggle),
 	ENUM("input.layout", input.layout, layouts),
+	KEY("ui.output", CONFIG_STRING, ui.output),
 	INT("screen_off.timeout", screen_off.timeout, 0, 3600),
 	KEY("theme.font", CONFIG_STRING, theme.font),
 	KEY("theme.foreground", CONFIG_COLOR, theme.foreground),

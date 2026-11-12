@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <wayland-client.h>
 
 #include "config/config.h"
@@ -83,15 +84,21 @@ static void output_scale(void *data, struct wl_output *wl, int32_t factor) {
 	output->pending_integer_scale = factor;
 }
 
-// the name only labels log lines, so a cut-off one is fine
+// ui.output is matched here, against the name before it is cut or cleaned
 static void output_name(void *data, struct wl_output *wl, const char *name) {
 	(void)wl;
 	struct output *output = data;
+	const char *wanted = output->display->ui_output;
+	output->ui_chosen = wanted[0] && strcmp(name, wanted) == 0;
 	snprintf(output->name, sizeof output->name, "%s", name);
 	for (char *c = output->name; *c; c++) {
 		if ((unsigned char)*c < 0x20 || *c == 0x7f) {
 			*c = '?';
 		}
+	}
+	if (output->ui_chosen) {
+		log_info("only output %s shows the UI (ui.output)",
+			output->name);
 	}
 }
 
@@ -342,12 +349,16 @@ static bool render(
 }
 
 // a dark output commits nothing; what changed meanwhile is drawn on wake
-bool output_render(struct output *output, const struct ui_content *content) {
+bool output_render(struct output *output, const struct ui_content *content,
+	bool shows_ui) {
 	if (output->power_off) {
 		return false;
 	}
 	output_show_background(output, content);
-	if (!output->mapped || output->ui_failed) {
+	if (!shows_ui && output->ui) {
+		drop_ui(output);
+	}
+	if (!shows_ui || !output->mapped || output->ui_failed) {
 		return false;
 	}
 	bool ok = true;

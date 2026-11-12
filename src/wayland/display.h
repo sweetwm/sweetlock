@@ -36,6 +36,7 @@ struct display {
 	bool background_warned;
 	// every seat's keyboard types into it
 	struct input *input;
+	const char *ui_output;
 	bool failed;
 };
 

@@ -110,6 +110,10 @@ struct config {
 		enum input_layout layout;
 	} input;
 	struct {
+		// empty, or naming no connected output: UI everywhere
+		char output[CONFIG_STRING_SIZE];
+	} ui;
+	struct {
 		// seconds without input before the outputs power off; 0 never
 		int32_t timeout;
 	} screen_off;
