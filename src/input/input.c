@@ -16,6 +16,7 @@
 #include "input/keyboard.h"
 #include "input/password.h"
 #include "log.h"
+#include "ui/field.h"
 
 // through our logger, so its lines never mix with the helper's
 __attribute__((format(printf, 3, 0))) static void log_xkb(
@@ -31,8 +32,9 @@ __attribute__((format(printf, 3, 0))) static void log_xkb(
 		"xkbcommon: %s", line);
 }
 
-bool input_init(struct input *input, struct auth *auth) {
-	*input = (struct input){.auth = auth, .repeat_fd = -1};
+bool input_init(
+	struct input *input, struct auth *auth, const struct field *field) {
+	*input = (struct input){.auth = auth, .field = field, .repeat_fd = -1};
 	// compositor keymaps arrive compiled, so xkb never reads its include
 	// paths
 	input->xkb = xkb_context_new(XKB_CONTEXT_NO_DEFAULT_INCLUDES);
@@ -186,8 +188,10 @@ static enum key_action handle(struct input *input, struct keyboard *keyboard,
 		changed = password->length > 0;
 		password_clear(password);
 		break;
+	// an empty Enter while a failure shows would only feed pam_faillock
 	case KEY_SUBMIT:
-		if (!repeat) {
+		if (!repeat &&
+			(password->length > 0 || !input->field->failed)) {
 			submit(input);
 			changed = true;
 		}

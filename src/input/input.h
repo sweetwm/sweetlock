@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 struct auth;
+struct field;
 struct keyboard;
 struct password;
 struct xkb_compose_table;
@@ -21,6 +22,7 @@ struct input_status {
 
 struct input {
 	struct auth *auth;
+	const struct field *field;
 	struct xkb_context *xkb;
 	struct xkb_compose_table *compose;
 	bool compose_loaded;
@@ -40,7 +42,8 @@ struct input {
 	uint32_t repeat_key;
 };
 
-bool input_init(struct input *input, struct auth *auth);
+bool input_init(
+	struct input *input, struct auth *auth, const struct field *field);
 
 void input_finish(struct input *input);
 

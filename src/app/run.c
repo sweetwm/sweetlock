@@ -360,7 +360,7 @@ int app_run(const struct config *config, const char *notice,
 	user_lookup(&app.user, config->username.text);
 	if (auth_start(&app.auth, app.user.login) &&
 		signals_open(&app.signal_fd) && field_init(&app.field) &&
-		input_init(&app.input, &app.auth) &&
+		input_init(&app.input, &app.auth, &app.field) &&
 		screen_init(&app.screen, config->screen_off.timeout) &&
 		display_connect(&app.display, config, &app.input) &&
 		display_lock(&app.display, start)) {

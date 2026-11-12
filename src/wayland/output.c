@@ -35,6 +35,7 @@ static void set_scale(
 			"output %s scale is now %.3f", output->name,
 			scale_factor(scale));
 		output->relayout = true;
+		output->ui_failed = false;
 	}
 }
 
@@ -178,6 +179,7 @@ static void lock_surface_configure(void *data,
 	output->width = w;
 	output->height = h;
 	output->relayout = true;
+	output->ui_failed = false;
 }
 
 static const struct ext_session_lock_surface_v1_listener lock_surface_listener =
@@ -351,6 +353,7 @@ bool output_render(struct output *output, const struct ui_content *content) {
 	bool ok = true;
 	bool committed = render(output, content, &ok);
 	if (!ok) {
+		// a new size or scale tries again
 		log_error("dropping the UI on output %s; it stays locked",
 			output->name);
 		drop_ui(output);
