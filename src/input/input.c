@@ -227,7 +227,8 @@ void input_clear(struct input *input) {
 }
 
 void input_press(struct input *input, struct keyboard *keyboard, uint32_t key) {
-	if (input_wakes(input)) {
+	// sweets gives focus a frame before locked, while no field is shown yet
+	if (input_wakes(input) || !input->ready) {
 		return;
 	}
 	if (input->auth->busy) {

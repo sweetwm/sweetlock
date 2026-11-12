@@ -207,6 +207,7 @@ static void start_ui(struct app *app) {
 	load_avatar(app);
 	ui_content_start(&app->content, &app->clock);
 	screen_start(&app->screen, &app->display, &app->input);
+	app->input.ready = true;
 	app->stage = STAGE_STARTED;
 }
 

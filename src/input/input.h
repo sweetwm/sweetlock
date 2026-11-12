@@ -24,6 +24,7 @@ struct input {
 	struct xkb_context *xkb;
 	struct xkb_compose_table *compose;
 	bool compose_loaded;
+	bool ready;
 	struct password *password;
 	bool revealed;
 	struct input_status status;
