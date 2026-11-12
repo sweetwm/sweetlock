@@ -155,8 +155,6 @@ static bool stopping(const struct app *app) {
 	       display->lock.state == LOCK_UNLOCKING || app->auth.lost;
 }
 
-// a queued unlock wins over any failure, and ends only after the
-// compositor has processed it; dark outputs come on in the same flush
 static int stop(struct display *display) {
 	if (display->lock.state != LOCK_UNLOCKING) {
 		return EXIT_FAILURE;
@@ -262,8 +260,16 @@ static bool flush(struct wl_display *wl, short *events) {
 	return true;
 }
 
-// poll skips a negative fd, so these wait until the UI starts them; a new
-// PAM helper brings a new socket
+static void read_last_error(struct wl_display *wl) {
+	int error = errno;
+	if (error != EPIPE) {
+		wl_display_cancel_read(wl);
+	} else if (wl_display_read_events(wl) == 0) {
+		(void)wl_display_dispatch_pending(wl);
+	}
+	errno = error;
+}
+
 static void late_fds(const struct app *app, struct pollfd *fds) {
 	fds[FD_AUTH].fd = app->auth.fd;
 	fds[FD_CLOCK].fd = app->clock.fd;
@@ -300,7 +306,7 @@ static int run(struct app *app) {
 		render(app);
 		late_fds(app, fds);
 		if (!flush(wl, &fds[FD_WAYLAND].events)) {
-			wl_display_cancel_read(wl);
+			read_last_error(wl);
 			goto lost;
 		}
 
