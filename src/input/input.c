@@ -66,8 +66,9 @@ static bool user_files_regular(void) {
 	const char *file = getenv("XCOMPOSEFILE");
 	const char *xdg = getenv("XDG_CONFIG_HOME");
 	const char *home = getenv("HOME");
+	// past PATH_MAX xkbcommon cannot open it either, so it skips it
 	if (file) {
-		snprintf(paths[0], PATH_MAX, "%s", file);
+		path_join(paths[0], file, "");
 	}
 	if (xdg && xdg[0] == '/') {
 		path_join(paths[1], xdg, "/XCompose");
