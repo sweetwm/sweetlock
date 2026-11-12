@@ -214,13 +214,25 @@ static bool from_parent(void) {
 	       fcntl(HELPER_FD, F_SETFD, FD_CLOEXEC) == 0;
 }
 
+static void ignore_signal(int number) {
+	(void)number;
+}
+
+static bool reset_signals(void) {
+	sigset_t none;
+	sigemptyset(&none);
+	struct sigaction handler = {
+		.sa_handler = ignore_signal, .sa_flags = SA_RESTART};
+	(void)setsid();
+	return sigaction(SIGPIPE, &handler, NULL) == 0 &&
+	       sigprocmask(SIG_SETMASK, &none, NULL) == 0;
+}
+
 _Noreturn void helper_main(const char *user) {
 	// PAM modules see only stdio and the socket; a failure is ignored, as a
 	// helper that refuses to start leaves no way to unlock
 	(void)close_range(HELPER_FD + 1, ~0U, 0);
-	// SIGTERM stays blocked across exec as in the parent, so only SIGKILL
-	// works
-	if (prctl(PR_SET_DUMPABLE, 0, 0, 0, 0) != 0 ||
+	if (!reset_signals() || prctl(PR_SET_DUMPABLE, 0, 0, 0, 0) != 0 ||
 		prctl(PR_SET_PDEATHSIG, SIGKILL, 0, 0, 0) != 0 ||
 		!from_parent() || !user[0]) {
 		_exit(EXIT_FAILURE);
