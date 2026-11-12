@@ -143,7 +143,7 @@ static bool handle_fds(struct app *app, const struct pollfd *fds) {
 	}
 	if (fds[FD_SCREEN].revents & POLLIN) {
 		screen_expire(&app->screen, &app->display, &app->input,
-			app->auth.busy);
+			app->auth.busy || app->field.failed);
 	}
 	return true;
 }
@@ -229,7 +229,11 @@ static void render(struct app *app) {
 	}
 	if (app->input.wake) {
 		app->input.wake = false;
-		screen_wake(&app->screen, display);
+		screen_wake(&app->screen, display, &app->input);
+	}
+	if (app->input.shown) {
+		app->input.shown = false;
+		screen_show(&app->screen, &app->input);
 	}
 	if (app->input.changed) {
 		app->input.changed = false;
@@ -361,7 +365,8 @@ int app_run(const struct config *config, const char *notice,
 	if (auth_start(&app.auth, app.user.login) &&
 		signals_open(&app.signal_fd) && field_init(&app.field) &&
 		input_init(&app.input, &app.auth, &app.field) &&
-		screen_init(&app.screen, config->screen_off.timeout) &&
+		screen_init(&app.screen, config->input.hide_after,
+			config->screen_off.timeout) &&
 		display_connect(&app.display, config, &app.input) &&
 		display_lock(&app.display, start)) {
 		wl_display_flush(app.display.wl);

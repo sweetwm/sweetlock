@@ -220,6 +220,7 @@ bool input_wakes(struct input *input) {
 	input_touch(input);
 	if (input->screens_off) {
 		input->wake = true;
+		input_show(input);
 	}
 	return input->screens_off;
 }
@@ -231,9 +232,29 @@ void input_clear(struct input *input) {
 	input->revealed = false;
 }
 
+void input_hide(struct input *input) {
+	input_clear(input);
+	input->quiet = true;
+	input->changed = true;
+}
+
+bool input_show(struct input *input) {
+	if (!input->quiet) {
+		return false;
+	}
+	input->quiet = false;
+	input->shown = true;
+	input->changed = true;
+	return true;
+}
+
 void input_press(struct input *input, struct keyboard *keyboard, uint32_t key) {
 	// sweets gives focus a frame before locked, while no field is shown yet
 	if (input_wakes(input) || !input->ready) {
+		return;
+	}
+	// the key that shows the login part is typed, unless it is Escape
+	if (input_show(input) && keyboard_is_escape(keyboard, key)) {
 		return;
 	}
 	if (input->auth->busy) {

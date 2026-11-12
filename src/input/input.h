@@ -37,6 +37,9 @@ struct input {
 	// the display keeps this current from the outputs' power modes
 	bool screens_off;
 	bool wake;
+	// the login part is hidden; shown is set once when it comes back
+	bool quiet;
+	bool shown;
 	int repeat_fd;
 	struct keyboard *repeat_keyboard;
 	uint32_t repeat_key;
@@ -66,6 +69,12 @@ bool input_wakes(struct input *input);
 
 // wipes the password and hides it, as the screens go off
 void input_clear(struct input *input);
+
+// the login part hides and takes what was typed with it
+void input_hide(struct input *input);
+
+// true when the login part was hidden and now shows again
+bool input_show(struct input *input);
 
 // a key press or a modifier change on a keyboard with this state
 void input_status(struct input *input, struct xkb_state *state);

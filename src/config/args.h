@@ -36,6 +36,8 @@ enum preview_field {
 	PREVIEW_LAYOUT,
 	// checking long enough to cancel, with a PAM info line
 	PREVIEW_CANCEL,
+	// the login part hidden after input.hide_after
+	PREVIEW_QUIET,
 };
 
 struct preview {

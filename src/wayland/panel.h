@@ -31,6 +31,7 @@ struct panel {
 	struct ui_rect rect;
 	uint32_t scale;
 	bool dirty;
+	bool mapped;
 };
 
 struct panel *panel_create(

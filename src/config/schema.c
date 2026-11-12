@@ -131,6 +131,7 @@ static const struct config_key keys[] = {
 	KEY("input.placeholder", CONFIG_STRING, input.placeholder),
 	KEY("input.reveal_toggle", CONFIG_BOOL, input.reveal_toggle),
 	ENUM("input.layout", input.layout, layouts),
+	INT("input.hide_after", input.hide_after, 0, 3600),
 	KEY("ui.output", CONFIG_STRING, ui.output),
 	INT("screen_off.timeout", screen_off.timeout, 0, 3600),
 	KEY("theme.font", CONFIG_STRING, theme.font),

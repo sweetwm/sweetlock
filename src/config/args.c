@@ -37,8 +37,8 @@ const char args_usage[] =
 	"  --preview-state STATE\n"
 	"                    Password field for --preview: idle, typing, "
 	"revealed,\n"
-	"                    checking, failed, info, error, caps, layout or\n"
-	"                    cancel (default idle)\n"
+	"                    checking, failed, info, error, caps, layout,\n"
+	"                    cancel or quiet (default idle)\n"
 	"  -h, --help        Print help\n"
 	"  -V, --version     Print version\n";
 
@@ -157,6 +157,7 @@ static void parse_state(struct args *args, const char *flag, const char *text) {
 		[PREVIEW_CAPS] = "caps",
 		[PREVIEW_LAYOUT] = "layout",
 		[PREVIEW_CANCEL] = "cancel",
+		[PREVIEW_QUIET] = "quiet",
 	};
 	for (size_t i = 0; i < sizeof names / sizeof names[0]; i++) {
 		if (strcmp(text, names[i]) == 0) {
@@ -165,7 +166,7 @@ static void parse_state(struct args *args, const char *flag, const char *text) {
 		}
 	}
 	log_error("%s: expected idle, typing, revealed, checking, failed, "
-		  "info, error, caps, layout or cancel; ignoring it",
+		  "info, error, caps, layout, cancel or quiet; ignoring it",
 		flag);
 }
 

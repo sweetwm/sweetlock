@@ -1,5 +1,6 @@
 #include "app/screen.h"
 
+#include <stdint.h>
 #include <sys/timerfd.h>
 #include <time.h>
 #include <unistd.h>
@@ -11,18 +12,19 @@
 
 enum { NS_PER_S = 1000000000 };
 
-bool screen_init(struct screen *screen, int32_t timeout_s) {
+bool screen_init(struct screen *screen, int32_t hide_s, int32_t off_s) {
 	*screen = (struct screen){
 		.fd = -1,
-		.timeout_ns = (int64_t)timeout_s * NS_PER_S,
+		.hide_ns = (int64_t)hide_s * NS_PER_S,
+		.off_ns = (int64_t)off_s * NS_PER_S,
 	};
-	if (timeout_s == 0) {
+	if (hide_s == 0 && off_s == 0) {
 		return true;
 	}
 	screen->fd =
 		timerfd_create(CLOCK_MONOTONIC, TFD_CLOEXEC | TFD_NONBLOCK);
 	if (screen->fd < 0) {
-		log_error("failed to create the screen-off timer: %m");
+		log_error("failed to create the idle timer: %m");
 		return false;
 	}
 	return true;
@@ -42,45 +44,71 @@ static void arm(struct screen *screen, int64_t after_ns) {
 			.tv_nsec = (long)(after_ns % NS_PER_S)},
 	};
 	if (timerfd_settime(screen->fd, 0, &spec, NULL) != 0) {
-		log_warn("failed to time the screen-off: %m");
+		log_warn("failed to time the idle screen: %m");
+	}
+}
+
+static int64_t idle_ns(const struct input *input) {
+	struct timespec now = {0};
+	clock_gettime(CLOCK_MONOTONIC, &now);
+	return (int64_t)now.tv_sec * NS_PER_S + now.tv_nsec - input->active_ns;
+}
+
+static void schedule(
+	struct screen *screen, const struct input *input, int64_t idle) {
+	int64_t next = INT64_MAX;
+	if (screen->hide_ns > idle && !input->quiet) {
+		next = screen->hide_ns;
+	}
+	if (screen->off_ns > idle && !input->screens_off &&
+		screen->off_ns < next) {
+		next = screen->off_ns;
+	}
+	if (screen->fd >= 0 && next != INT64_MAX) {
+		arm(screen, next - idle);
 	}
 }
 
 void screen_start(
 	struct screen *screen, struct display *display, struct input *input) {
-	if (screen->fd >= 0 && power_start(display)) {
-		input_touch(input);
-		arm(screen, screen->timeout_ns);
+	if (screen->off_ns > 0 && !power_start(display)) {
+		screen->off_ns = 0;
 	}
+	input_touch(input);
+	schedule(screen, input, 0);
 }
 
-// an attempt in flight holds the screens on, and its end counts as input
+// an attempt in flight holds both, and its end counts as input
 void screen_expire(struct screen *screen, struct display *display,
-	struct input *input, bool busy) {
+	struct input *input, bool held) {
 	uint64_t expirations = 0;
 	if (read(screen->fd, &expirations, sizeof expirations) !=
 		(ssize_t)sizeof expirations) {
 		return;
 	}
-	struct timespec now = {0};
-	clock_gettime(CLOCK_MONOTONIC, &now);
-	int64_t idle =
-		(int64_t)now.tv_sec * NS_PER_S + now.tv_nsec - input->active_ns;
-	if (busy || idle < screen->timeout_ns) {
-		arm(screen,
-			busy ? screen->timeout_ns : screen->timeout_ns - idle);
-		return;
+	int64_t idle = held ? 0 : idle_ns(input);
+	if (screen->hide_ns > 0 && idle >= screen->hide_ns && !input->quiet) {
+		log_info("no input for %d s; hiding the login",
+			(int)(screen->hide_ns / NS_PER_S));
+		input_hide(input);
 	}
-	log_info("no input for %d s; turning the screens off",
-		(int)(screen->timeout_ns / NS_PER_S));
-	input_clear(input);
-	power_set(display, false);
+	if (screen->off_ns > 0 && idle >= screen->off_ns &&
+		!input->screens_off) {
+		log_info("no input for %d s; turning the screens off",
+			(int)(screen->off_ns / NS_PER_S));
+		input_clear(input);
+		power_set(display, false);
+	}
+	schedule(screen, input, idle);
 }
 
-void screen_wake(struct screen *screen, struct display *display) {
+void screen_wake(
+	struct screen *screen, struct display *display, struct input *input) {
 	log_info("waking the screens");
 	power_set(display, true);
-	if (screen->fd >= 0) {
-		arm(screen, screen->timeout_ns);
-	}
+	schedule(screen, input, idle_ns(input));
+}
+
+void screen_show(struct screen *screen, const struct input *input) {
+	schedule(screen, input, idle_ns(input));
 }

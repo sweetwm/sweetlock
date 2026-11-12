@@ -17,7 +17,7 @@
 static bool draw_part(struct ui *ui, enum ui_part part, cairo_t *cr,
 	int32_t width, int32_t height) {
 	struct ui_rect rect;
-	if (!ui_shows(ui->content, part) ||
+	if (!ui_shows(ui->content, part) || ui_hidden(ui->content, part) ||
 		!ui_place(ui->content, part, width, height, ui->scale, &rect)) {
 		return true;
 	}
@@ -122,6 +122,7 @@ int app_preview(const struct config *config, const char *notice,
 		.repeat_fd = -1,
 		.revealed = state == PREVIEW_REVEALED,
 		.status = {.caps_lock = state == PREVIEW_CAPS},
+		.quiet = state == PREVIEW_QUIET,
 	};
 	if (state == PREVIEW_LAYOUT) {
 		static const char layout[] = "Latvian (apostrophe)";
