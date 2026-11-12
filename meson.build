@@ -28,7 +28,8 @@ add_project_arguments(
 
 fs = import('fs')
 
-cairo = dependency('cairo')
+# cairo_pattern_set_dither arrived in 1.18
+cairo = dependency('cairo', version: '>= 1.18')
 # system includes, so GLib's headers stay out of our warning flags
 pangocairo = dependency('pangocairo', include_type: 'system')
 libm = cc.find_library('m', required: false)
@@ -44,6 +45,15 @@ wayland_scanner = find_program(
 xkbcommon = dependency('xkbcommon')
 pam = dependency('pam')
 libjpeg = dependency('libjpeg')
+# IJG libjpeg installs the same libjpeg.pc but lacks libjpeg-turbo's extended
+# colour spaces
+cc.has_header_symbol(
+	'jpeglib.h',
+	'JCS_EXT_BGRX',
+	prefix: '#include <stdio.h>',
+	dependencies: libjpeg,
+	required: true,
+)
 
 subdir('protocol')
 
