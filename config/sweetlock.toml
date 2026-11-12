@@ -102,6 +102,11 @@ reveal_toggle = true
 # "status" puts its name on the status line under the field, "corner" puts
 # its code (US, LV) in a round badge at the top right of every output
 layout = "status"
+# Seconds without input before the avatar, name and field hide, leaving the
+# background and the clock, up to 3600; 0 never. The first key brings them
+# back and is typed (Escape only shows them); a click only shows them.
+# Hiding wipes a half-typed password.
+hide_after = 0
 
 [ui]
 # The output that shows the clock and the login, for example "DP-1", the

@@ -84,7 +84,8 @@ static void pointer_button(void *data, struct wl_pointer *wl, uint32_t serial,
 	if (state != WL_POINTER_BUTTON_STATE_PRESSED) {
 		return;
 	}
-	if (!input_wakes(input) && button == BTN_LEFT && over_eye(pointer)) {
+	if (!input_wakes(input) && !input_show(input) && button == BTN_LEFT &&
+		over_eye(pointer)) {
 		input_toggle_reveal(input);
 	}
 }

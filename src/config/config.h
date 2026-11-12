@@ -108,6 +108,8 @@ struct config {
 		char placeholder[CONFIG_STRING_SIZE];
 		bool reveal_toggle;
 		enum input_layout layout;
+		// seconds without input before the login part hides; 0 never
+		int32_t hide_after;
 	} input;
 	struct {
 		// empty, or naming no connected output: UI everywhere

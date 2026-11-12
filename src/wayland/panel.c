@@ -134,7 +134,27 @@ static void attach(struct panel *panel, struct buffer *buffer) {
 	buffer->busy = true;
 }
 
+// a subsurface unmaps with a null buffer; the lock surface never gets one
+static enum panel_result unmap(struct panel *panel) {
+	panel->dirty = false;
+	if (!panel->mapped) {
+		return PANEL_IDLE;
+	}
+	// an unmapped surface may never see its frame callback fire
+	if (panel->frame) {
+		wl_callback_destroy(panel->frame);
+		panel->frame = NULL;
+	}
+	wl_surface_attach(panel->surface, NULL, 0, 0);
+	wl_surface_commit(panel->surface);
+	panel->mapped = false;
+	return PANEL_COMMITTED;
+}
+
 enum panel_result panel_render(struct panel *panel, struct ui *ui) {
+	if (panel->dirty && ui_hidden(ui->content, panel->part)) {
+		return unmap(panel);
+	}
 	if (!panel->dirty || panel->frame) {
 		return PANEL_IDLE;
 	}
@@ -155,6 +175,7 @@ enum panel_result panel_render(struct panel *panel, struct ui *ui) {
 	attach(panel, buffer);
 	wl_surface_commit(panel->surface);
 	panel->dirty = false;
+	panel->mapped = true;
 	return PANEL_COMMITTED;
 }
 

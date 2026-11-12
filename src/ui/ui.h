@@ -84,6 +84,9 @@ void ui_content_finish(struct ui_content *content);
 
 bool ui_shows(const struct ui_content *content, enum ui_part part);
 
+// a part that exists but is unmapped for now
+bool ui_hidden(const struct ui_content *content, enum ui_part part);
+
 bool ui_place(const struct ui_content *content, enum ui_part part,
 	int32_t width, int32_t height, uint32_t scale, struct ui_rect *rect);
 

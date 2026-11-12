@@ -15,6 +15,10 @@ bool ui_shows(const struct ui_content *content, enum ui_part part) {
 	return true;
 }
 
+bool ui_hidden(const struct ui_content *content, enum ui_part part) {
+	return part == UI_LOGIN && content->input->quiet;
+}
+
 static int32_t snap(int32_t value, int32_t step) {
 	return value < 0 ? 0 : (value + step / 2) / step * step;
 }
