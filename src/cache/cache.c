@@ -208,15 +208,11 @@ enum cache_result cache_read(int dir, const struct cache_key *key,
 	if (fd < 0 && errno == ENOENT) {
 		return CACHE_MISS;
 	}
-	if (fd < 0) {
-		fail_errno(error, error_size, name);
-		return CACHE_FAILED;
-	}
 	unsigned char header[CACHE_HEADER_SIZE + CACHE_KEY_MAX];
 	size_t header_length = CACHE_HEADER_SIZE + key->length;
 	size_t pixels = pixel_bytes(image);
 	struct stat info;
-	bool hit = fstat(fd, &info) == 0 && S_ISREG(info.st_mode) &&
+	bool hit = fd >= 0 && fstat(fd, &info) == 0 && S_ISREG(info.st_mode) &&
 		   (uintmax_t)info.st_size == header_length + pixels &&
 		   read_at(fd, header, header_length, 0) &&
 		   matches(header, header_length, key, image) &&
@@ -225,11 +221,18 @@ enum cache_result cache_read(int dir, const struct cache_key *key,
 	if (hit) {
 		futimens(fd, NULL);
 	}
-	close(fd);
+	if (fd >= 0) {
+		close(fd);
+	}
 	if (hit) {
 		return CACHE_HIT;
 	}
-	unlinkat(dir, name, 0);
+	// a name that will not open (a symlink, an unreadable file) goes too,
+	// or no save could ever replace it
+	if (unlinkat(dir, name, 0) != 0) {
+		fail_errno(error, error_size, name);
+		return CACHE_FAILED;
+	}
 	snprintf(error, error_size, "deleted the bad cache entry %s", name);
 	return CACHE_BAD;
 }

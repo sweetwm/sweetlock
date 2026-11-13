@@ -91,12 +91,11 @@ static int write_png(
 	return EXIT_SUCCESS;
 }
 
-// sample lines as pam_fprintd and pam_faillock word them
+// sample lines as pam_fprintd words them
 static void show_notice(struct auth *auth, enum preview_field state) {
 	static const char info[] =
 		"Place your finger on the fingerprint reader";
-	static const char error[] = "The account is locked due to 3 failed "
-				    "logins. (5 minutes left to unlock)";
+	static const char error[] = "Failed to match fingerprint";
 	if (state == PREVIEW_INFO || state == PREVIEW_CANCEL) {
 		auth->notice = AUTH_NOTICE_INFO;
 		memcpy(auth->notice_text, info, sizeof info);

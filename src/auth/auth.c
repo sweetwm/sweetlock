@@ -131,10 +131,19 @@ bool auth_submit(struct auth *auth, const struct password *password) {
 }
 
 static void keep_notice(struct auth *auth, const struct message_reply *reply) {
-	auth->notice = reply->kind == MESSAGE_INFO ? AUTH_NOTICE_INFO
-						   : AUTH_NOTICE_ERROR;
-	memcpy(auth->notice_text, reply->text, reply->length);
-	auth->notice_text[reply->length] = '\0';
+	enum auth_notice notice = reply->kind == MESSAGE_INFO
+					  ? AUTH_NOTICE_INFO
+					  : AUTH_NOTICE_ERROR;
+	size_t used = strlen(auth->notice_text);
+	if (auth->notice != notice ||
+		used + 1 + reply->length > MESSAGE_TEXT_MAX) {
+		used = 0;
+	} else {
+		auth->notice_text[used++] = ' ';
+	}
+	auth->notice = notice;
+	memcpy(auth->notice_text + used, reply->text, reply->length);
+	auth->notice_text[used + reply->length] = '\0';
 }
 
 // an attempt in flight fails with the helper that ran it
