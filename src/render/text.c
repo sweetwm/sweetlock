@@ -66,3 +66,33 @@ void text_draw_centred(
 	text_draw(cr, layout, (width - logical.width / (double)PANGO_SCALE) / 2,
 		centre_y);
 }
+
+void text_measure_digits(PangoLayout *layout, struct text_digits *digits) {
+	*digits = (struct text_digits){0};
+	for (int i = 0; i < 10; i++) {
+		char digit = (char)('0' + i);
+		pango_layout_set_text(layout, &digit, 1);
+		PangoRectangle logical;
+		pango_layout_get_extents(layout, NULL, &logical);
+		digits->width[i] = logical.width;
+		if (logical.width > digits->widest) {
+			digits->widest = logical.width;
+		}
+	}
+	pango_layout_set_text(layout, "", 0);
+}
+
+void text_draw_digits_centred(cairo_t *cr, PangoLayout *layout,
+	const struct text_digits *digits, double width, double centre_y) {
+	PangoRectangle logical;
+	pango_layout_get_extents(layout, NULL, &logical);
+	int reserved = logical.width;
+	for (const char *c = pango_layout_get_text(layout); *c; c++) {
+		if (*c >= '0' && *c <= '9') {
+			reserved += digits->widest - digits->width[*c - '0'];
+		}
+	}
+	// an ellipsized line already fills the width
+	double x = (width - reserved / (double)PANGO_SCALE) / 2;
+	text_draw(cr, layout, fmax(x, 0), centre_y);
+}

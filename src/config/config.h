@@ -121,6 +121,8 @@ struct config {
 	} screen_off;
 	struct {
 		char font[CONFIG_STRING_SIZE];
+		// empty: font
+		char clock_font[CONFIG_STRING_SIZE];
 		struct color foreground;
 		struct color muted;
 		struct color field;
