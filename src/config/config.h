@@ -123,6 +123,8 @@ struct config {
 		char font[CONFIG_STRING_SIZE];
 		// empty: font
 		char clock_font[CONFIG_STRING_SIZE];
+		// the time's, 100 to 1000; the date is 100 lighter
+		int32_t clock_weight;
 		struct color foreground;
 		struct color muted;
 		struct color field;

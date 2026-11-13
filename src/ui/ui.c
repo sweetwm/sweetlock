@@ -101,11 +101,13 @@ static void set_fonts(struct ui *ui) {
 	const char *font = config->theme.font;
 	const char *clock_font =
 		config->theme.clock_font[0] ? config->theme.clock_font : font;
+	int32_t weight = config->theme.clock_weight;
 	double s = scale_factor(ui->scale);
-	text_set_font(ui->time, clock_font, PANGO_WEIGHT_BOLD,
+	text_set_font(ui->time, clock_font, (PangoWeight)weight,
 		ui_theme.time_size * s, ui_theme.width * s);
 	ui->digits = (struct text_digits){0};
-	text_set_font(ui->date, clock_font, PANGO_WEIGHT_SEMIBOLD,
+	text_set_font(ui->date, clock_font,
+		(PangoWeight)(weight > 200 ? weight - 100 : PANGO_WEIGHT_THIN),
 		ui_theme.date_size * s, ui_theme.width * s);
 	text_set_font(ui->name, font, PANGO_WEIGHT_NORMAL,
 		ui_theme.name_size * s, ui_theme.name_width * s);
