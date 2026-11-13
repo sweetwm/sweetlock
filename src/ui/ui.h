@@ -8,6 +8,7 @@
 
 #include "input/input.h"
 #include "input/layout.h"
+#include "render/text.h"
 #include "ui/avatar.h"
 
 struct auth;
@@ -65,6 +66,8 @@ struct ui {
 	PangoLayout *entry;
 	PangoLayout *status;
 	PangoLayout *badge;
+	// the time's digits at this scale, measured on first draw
+	struct text_digits digits;
 	// the layout name the badge's label was found for
 	char badge_name[INPUT_LAYOUT_SIZE];
 	char badge_label[LAYOUT_LABEL_SIZE];

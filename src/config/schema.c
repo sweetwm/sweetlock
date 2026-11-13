@@ -64,6 +64,7 @@ static const struct config defaults = {
 	.theme =
 		{
 			.font = "sans-serif",
+			.clock_font = "",
 			.foreground = {0xe8, 0xe6, 0xf0, 0xff},
 			.muted = {0xa9, 0xa4, 0xbd, 0xff},
 			.field = {0xff, 0xff, 0xff, 0x1a},
@@ -135,6 +136,7 @@ static const struct config_key keys[] = {
 	KEY("ui.output", CONFIG_STRING, ui.output),
 	INT("screen_off.timeout", screen_off.timeout, 0, 3600),
 	KEY("theme.font", CONFIG_STRING, theme.font),
+	KEY("theme.clock_font", CONFIG_STRING, theme.clock_font),
 	KEY("theme.foreground", CONFIG_COLOR, theme.foreground),
 	KEY("theme.muted", CONFIG_COLOR, theme.muted),
 	KEY("theme.field", CONFIG_COLOR, theme.field),

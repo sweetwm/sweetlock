@@ -7,6 +7,12 @@
 // fontconfig loads in Pango's own thread from here; this returns at once
 void text_prepare(void);
 
+// each digit's advance in Pango units; widest 0 until measured
+struct text_digits {
+	int width[10];
+	int widest;
+};
+
 // one line, ellipsized at its width, with tabular figures
 PangoLayout *text_layout_create(void);
 
@@ -22,5 +28,11 @@ void text_draw(cairo_t *cr, PangoLayout *layout, double x, double centre_y);
 
 void text_draw_centred(
 	cairo_t *cr, PangoLayout *layout, double width, double centre_y);
+
+// clears the layout's text, so the next text_set reshapes it
+void text_measure_digits(PangoLayout *layout, struct text_digits *digits);
+
+void text_draw_digits_centred(cairo_t *cr, PangoLayout *layout,
+	const struct text_digits *digits, double width, double centre_y);
 
 #endif

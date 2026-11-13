@@ -123,6 +123,8 @@ timeout = 0
 [theme]
 # A fontconfig family, or a comma-separated list of them
 font = "sans-serif"
+# The clock and the date; empty uses font
+clock_font = ""
 # Colours as "#rrggbb" or "#rrggbbaa"
 # The username, the avatar outline and the field's text
 foreground = "#e8e6f0"

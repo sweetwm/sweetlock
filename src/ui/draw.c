@@ -27,13 +27,17 @@ static void draw_line(const struct ui *ui, cairo_t *cr, PangoLayout *layout,
 	text_draw_centred(cr, layout, width, centre * scale_factor(ui->scale));
 }
 
-static void draw_clock(const struct ui *ui, cairo_t *cr, int32_t width) {
+static void draw_clock(struct ui *ui, cairo_t *cr, int32_t width) {
 	const struct config *config = ui->content->config;
 	const struct clock *clock = ui->content->clock;
 	set_source(cr, config->theme.muted);
 	if (config->clock.enabled) {
+		if (!ui->digits.widest) {
+			text_measure_digits(ui->time, &ui->digits);
+		}
 		text_set(ui->time, clock->time);
-		draw_line(ui, cr, ui->time, width, ui_theme.time_centre);
+		text_draw_digits_centred(cr, ui->time, &ui->digits, width,
+			ui_theme.time_centre * scale_factor(ui->scale));
 	}
 	if (config->date.enabled) {
 		text_set(ui->date, clock->date);

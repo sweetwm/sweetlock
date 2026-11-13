@@ -99,10 +99,13 @@ static int32_t entry_width(const struct config *config) {
 static void set_fonts(struct ui *ui) {
 	const struct config *config = ui->content->config;
 	const char *font = config->theme.font;
+	const char *clock_font =
+		config->theme.clock_font[0] ? config->theme.clock_font : font;
 	double s = scale_factor(ui->scale);
-	text_set_font(ui->time, font, PANGO_WEIGHT_BOLD, ui_theme.time_size * s,
-		ui_theme.width * s);
-	text_set_font(ui->date, font, PANGO_WEIGHT_SEMIBOLD,
+	text_set_font(ui->time, clock_font, PANGO_WEIGHT_BOLD,
+		ui_theme.time_size * s, ui_theme.width * s);
+	ui->digits = (struct text_digits){0};
+	text_set_font(ui->date, clock_font, PANGO_WEIGHT_SEMIBOLD,
 		ui_theme.date_size * s, ui_theme.width * s);
 	text_set_font(ui->name, font, PANGO_WEIGHT_NORMAL,
 		ui_theme.name_size * s, ui_theme.name_width * s);
