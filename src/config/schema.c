@@ -63,7 +63,7 @@ static const struct config defaults = {
 	.ui = {.output = ""},
 	.theme =
 		{
-			.font = "sans-serif",
+			.font = "Noto Sans",
 			.clock_font = "",
 			.clock_weight = 700,
 			.foreground = {0xe8, 0xe6, 0xf0, 0xff},
