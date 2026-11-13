@@ -122,7 +122,7 @@ timeout = 0
 
 [theme]
 # A fontconfig family, or a comma-separated list of them
-font = "sans-serif"
+font = "Noto Sans"
 # The clock and the date; empty uses font
 clock_font = ""
 # The clock's weight, 100 (thin) to 1000; 400 is regular, 700 bold. The
