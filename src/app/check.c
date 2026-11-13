@@ -42,9 +42,8 @@ static bool image_ok(const char *key, const char *configured) {
 	} else if (format == IMAGE_UNKNOWN) {
 		log_error("%s: %s: not a PNG or JPEG image", key, path);
 	} else if (!image_fits(width, height)) {
-		log_error("%s: %s: %" PRIu32 "x%" PRIu32
-			  " is past the limit of %d pixels",
-			key, path, width, height, IMAGE_PIXELS_MAX);
+		image_limit_error(width, height, error, sizeof error);
+		log_error("%s: %s: %s", key, path, error);
 	} else {
 		return true;
 	}

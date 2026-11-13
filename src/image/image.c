@@ -106,6 +106,24 @@ bool image_fits(uint32_t width, uint32_t height) {
 	       (uint64_t)width * height <= IMAGE_PIXELS_MAX;
 }
 
+void image_limit_error(
+	uint32_t width, uint32_t height, char *error, size_t error_size) {
+	if (width == 0 || height == 0) {
+		snprintf(error, error_size, "%" PRIu32 "x%" PRIu32 " is empty",
+			width, height);
+	} else if (width > IMAGE_SIDE_MAX || height > IMAGE_SIDE_MAX) {
+		snprintf(error, error_size,
+			"%" PRIu32 "x%" PRIu32
+			" is past the limit of %d pixels a side",
+			width, height, IMAGE_SIDE_MAX);
+	} else {
+		snprintf(error, error_size,
+			"%" PRIu32 "x%" PRIu32
+			" is past the limit of %d pixels",
+			width, height, IMAGE_PIXELS_MAX);
+	}
+}
+
 static cairo_surface_t *decode_png(const unsigned char *data, size_t length,
 	uint32_t width, uint32_t height, char *error, size_t error_size) {
 	struct reader reader = {.data = data, .length = length};
@@ -137,10 +155,7 @@ cairo_surface_t *image_decode(const unsigned char *data, size_t length,
 		return NULL;
 	}
 	if (!image_fits(width, height)) {
-		snprintf(error, error_size,
-			"%" PRIu32 "x%" PRIu32
-			" is past the limit of %d pixels",
-			width, height, IMAGE_PIXELS_MAX);
+		image_limit_error(width, height, error, error_size);
 		return NULL;
 	}
 	if (format == IMAGE_PNG) {

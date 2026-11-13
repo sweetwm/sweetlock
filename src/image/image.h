@@ -29,6 +29,10 @@ bool image_jpeg_size(const unsigned char *data, size_t length, uint32_t *width,
 // within the side and pixel limits every decode checks
 bool image_fits(uint32_t width, uint32_t height);
 
+// which limit a size image_fits refused is past
+void image_limit_error(
+	uint32_t width, uint32_t height, char *error, size_t error_size);
+
 enum image_format image_probe(const unsigned char *data, size_t length,
 	uint32_t *width, uint32_t *height);
 
