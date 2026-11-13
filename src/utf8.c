@@ -40,6 +40,11 @@ static size_t sequence(const unsigned char *text, size_t left) {
 		code > 0x10ffff) {
 		return 0;
 	}
+	// bidi embeddings, overrides and isolates reorder the text around them
+	if ((code >= 0x202a && code <= 0x202e) ||
+		(code >= 0x2066 && code <= 0x2069)) {
+		return 0;
+	}
 	return length;
 }
 
@@ -63,11 +68,16 @@ size_t utf8_line(const char *text, size_t size, char *out, size_t max) {
 		size_t step =
 			sequence((const unsigned char *)text + i, size - i);
 		if (step == 0) {
-			// a space is plain, and a leading one is dropped below
+			// one space per bad character, however many bytes, a
+			// leading one is dropped below
 			if (length > 0 && length < max) {
 				out[length++] = ' ';
 			}
 			i++;
+			while (i < size &&
+				((unsigned char)text[i] & 0xc0) == 0x80) {
+				i++;
+			}
 			continue;
 		}
 		if (length + step > max) {

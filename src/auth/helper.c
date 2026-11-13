@@ -38,8 +38,9 @@ static void free_replies(struct pam_response *replies, int count) {
 	free(replies);
 }
 
-// a lost socket ends the attempt soon enough, so a failed send is ignored
-static void tell(struct conversation *conversation, char kind, const char *text,
+// false past the attempt's limit, a lost socket ends the attempt soon
+// enough, so a failed send is ignored
+static bool tell(struct conversation *conversation, char kind, const char *text,
 	size_t length) {
 	if (conversation->texts >= MESSAGE_TEXT_COUNT) {
 		if (conversation->texts == MESSAGE_TEXT_COUNT) {
@@ -48,13 +49,14 @@ static void tell(struct conversation *conversation, char kind, const char *text,
 				MESSAGE_TEXT_COUNT);
 			conversation->texts++;
 		}
-		return;
+		return false;
 	}
 	conversation->texts++;
 	char packet[MESSAGE_REPLY_MAX];
 	packet[0] = kind;
 	memcpy(packet + 1, text, length);
 	(void)send(conversation->fd, packet, length + 1, MSG_NOSIGNAL);
+	return true;
 }
 
 static void show(
@@ -62,7 +64,10 @@ static void show(
 	char line[MESSAGE_TEXT_MAX];
 	size_t length = utf8_line(
 		text, strnlen(text, PAM_MAX_MSG_SIZE), line, sizeof line);
-	if (length == 0) {
+	// the limit bounds the log too, not only the status line
+	if (length == 0 ||
+		!tell(conversation, error ? MESSAGE_ERROR : MESSAGE_INFO, line,
+			length)) {
 		return;
 	}
 	if (error) {
@@ -70,7 +75,6 @@ static void show(
 	} else {
 		log_info("PAM: %.*s", (int)length, line);
 	}
-	tell(conversation, error ? MESSAGE_ERROR : MESSAGE_INFO, line, length);
 }
 
 _Static_assert(sizeof SERVICE_MISSING - 1 <= MESSAGE_TEXT_MAX,
