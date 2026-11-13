@@ -125,6 +125,9 @@ timeout = 0
 font = "sans-serif"
 # The clock and the date; empty uses font
 clock_font = ""
+# The clock's weight, 100 (thin) to 1000; 400 is regular, 700 bold. The
+# date is 100 lighter. A font with no bold gets a synthetic one from 700
+clock_weight = 700
 # Colours as "#rrggbb" or "#rrggbbaa"
 # The username, the avatar outline and the field's text
 foreground = "#e8e6f0"
