@@ -9,7 +9,8 @@ enum signal_action {
 	SIGNAL_EXIT,
 };
 
-// the signals app_protect blocked, as a non-blocking signalfd
+// the signals app_protect blocked, as a descriptor for poll: a signalfd,
+// or a kqueue on FreeBSD
 bool signals_open(int *fd);
 
 enum signal_action signals_read(int fd);

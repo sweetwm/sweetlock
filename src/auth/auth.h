@@ -23,6 +23,9 @@ struct auth {
 	pid_t pid;
 	int fd;
 	int timer_fd;
+#ifdef __FreeBSD__
+	int self_fd;
+#endif
 	const char *login;
 	int respawns;
 	bool busy;

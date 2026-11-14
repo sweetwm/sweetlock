@@ -7,9 +7,15 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/prctl.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#ifdef __FreeBSD__
+#include <sys/procctl.h>
+#include <sys/ucred.h>
+#include <sys/un.h>
+#else
+#include <sys/prctl.h>
+#endif
 
 #include "auth/message.h"
 #include "auth/service.h"
@@ -202,20 +208,48 @@ static void serve(
 	}
 }
 
+static pid_t creator(void) {
+#ifdef __FreeBSD__
+	struct xucred peer = {0};
+	socklen_t size = sizeof peer;
+	if (getsockopt(HELPER_FD, SOL_LOCAL, LOCAL_PEERCRED, &peer, &size) !=
+			0 ||
+		peer.cr_version != XUCRED_VERSION) {
+		return -1;
+	}
+	return peer.cr_pid;
+#else
+	struct ucred peer = {0};
+	socklen_t size = sizeof peer;
+	if (getsockopt(HELPER_FD, SOL_SOCKET, SO_PEERCRED, &peer, &size) != 0) {
+		return -1;
+	}
+	return peer.pid;
+#endif
+}
+
 // the socket the locker made, so the locker is still its parent; programs
 // PAM runs do not get it
 static bool from_parent(void) {
 	int type = 0;
-	struct ucred peer = {0};
 	socklen_t type_size = sizeof type;
-	socklen_t peer_size = sizeof peer;
 	return getsockopt(HELPER_FD, SOL_SOCKET, SO_TYPE, &type, &type_size) ==
 		       0 &&
-	       type == SOCK_SEQPACKET &&
-	       getsockopt(HELPER_FD, SOL_SOCKET, SO_PEERCRED, &peer,
-		       &peer_size) == 0 &&
-	       peer.pid == getppid() &&
+	       type == SOCK_SEQPACKET && creator() == getppid() &&
 	       fcntl(HELPER_FD, F_SETFD, FD_CLOEXEC) == 0;
+}
+
+// no ptrace and no core dump of the password, and death with the locker
+static bool protect(void) {
+#ifdef __FreeBSD__
+	int trace = PROC_TRACE_CTL_DISABLE;
+	int death = SIGKILL;
+	return procctl(P_PID, 0, PROC_TRACE_CTL, &trace) == 0 &&
+	       procctl(P_PID, 0, PROC_PDEATHSIG_CTL, &death) == 0;
+#else
+	return prctl(PR_SET_DUMPABLE, 0, 0, 0, 0) == 0 &&
+	       prctl(PR_SET_PDEATHSIG, SIGKILL, 0, 0, 0) == 0;
+#endif
 }
 
 static void ignore_signal(int number) {
@@ -236,13 +270,13 @@ _Noreturn void helper_main(const char *user) {
 	// PAM modules see only stdio and the socket; a failure is ignored, as a
 	// helper that refuses to start leaves no way to unlock
 	(void)close_range(HELPER_FD + 1, ~0U, 0);
-	if (!reset_signals() || prctl(PR_SET_DUMPABLE, 0, 0, 0, 0) != 0 ||
-		prctl(PR_SET_PDEATHSIG, SIGKILL, 0, 0, 0) != 0 ||
-		!from_parent() || !user[0]) {
+	if (!reset_signals() || !protect() || !from_parent() || !user[0]) {
 		_exit(EXIT_FAILURE);
 	}
+#ifndef __FreeBSD__
 	// exec through /proc/self/exe names the process "exe"
 	(void)prctl(PR_SET_NAME, "sweetlock", 0, 0, 0);
+#endif
 	struct password *password = password_create();
 	struct conversation conversation = {
 		.password = password,
