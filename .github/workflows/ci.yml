@@ -22,6 +22,9 @@ env:
     wayland wayland-protocols libxkbcommon pam cairo pango libjpeg-turbo
   PACMAN_LINT_DEPS: >-
     git actionlint shellcheck
+  FREEBSD_DEPS: >-
+    meson ninja pkgconf
+    wayland wayland-protocols libxkbcommon cairo pango jpeg-turbo
 
 jobs:
   lint:
@@ -118,3 +121,24 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Valgrind smoke run
         run: ./scripts/valgrind
+
+  freebsd:
+    name: Build (FreeBSD 15)
+    if: vars.RUN_CI == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # scripts/check would need llvm21 (1.85 GiB) for clang-format, which the
+      # Linux jobs already run, so this configures and builds directly
+      - name: Build in a FreeBSD VM
+        uses: vmactions/freebsd-vm@811efaaac0668df8bfb8308c3ec997b5ab50037b # v1.6.0
+        with:
+          release: "15"
+          copyback: false
+          prepare: pkg install -y ${{ env.FREEBSD_DEPS }}
+          run: |
+            meson setup build --werror
+            ninja -C build
+            ./build/sweetlock --version
