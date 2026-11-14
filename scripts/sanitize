@@ -8,7 +8,13 @@ meson setup --reconfigure build-asan --werror \
 
 ninja -C build-asan
 
-export ASAN_OPTIONS="${ASAN_OPTIONS:-detect_leaks=1}"
+# LeakSanitizer does not run on FreeBSD, and ASan refuses detect_leaks=1
+# there; the Linux gate covers leaks
+case "$(uname -s)" in
+FreeBSD) leaks=0 ;;
+*) leaks=1 ;;
+esac
+export ASAN_OPTIONS="${ASAN_OPTIONS:-detect_leaks=$leaks}"
 export UBSAN_OPTIONS="${UBSAN_OPTIONS:-print_stacktrace=1:halt_on_error=1}"
 export LSAN_OPTIONS="${LSAN_OPTIONS:-suppressions=$PWD/scripts/lsan.supp:print_suppressions=0}"
 
