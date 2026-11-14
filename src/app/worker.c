@@ -1,6 +1,6 @@
 #include "app/worker.h"
 
-#include <string.h>
+#include <errno.h>
 #include <sys/eventfd.h>
 #include <unistd.h>
 
@@ -45,8 +45,8 @@ bool worker_start(struct worker *worker) {
 	}
 	int error = pthread_create(&worker->thread, NULL, work, worker);
 	if (error != 0) {
-		log_error("failed to start the render worker: %s",
-			strerrordesc_np(error));
+		errno = error;
+		log_error("failed to start the render worker: %m");
 		close(worker->fd);
 		*worker = stopped;
 		return false;
