@@ -19,6 +19,7 @@
 
 #include "auth/helper.h"
 #include "auth/message.h"
+#include "auth/packet.h"
 #include "input/password.h"
 #include "log.h"
 
@@ -180,7 +181,7 @@ bool auth_start(struct auth *auth, const char *login) {
 
 bool auth_submit(struct auth *auth, const struct password *password) {
 	size_t size = password->length + 1;
-	if (send(auth->fd, password->bytes, size, MESSAGE_SEND) !=
+	if (send(auth->fd, password->bytes, size, PACKET_SEND) !=
 		(ssize_t)size) {
 		log_error("failed to send the password to the PAM helper: %m");
 		return false;
@@ -240,7 +241,8 @@ enum auth_result auth_read(struct auth *auth) {
 	enum auth_result result = AUTH_PENDING;
 	for (;;) {
 		char packet[MESSAGE_REPLY_MAX];
-		ssize_t size = recv(auth->fd, packet, sizeof packet, MSG_TRUNC);
+		ssize_t size =
+			packet_receive(auth->fd, packet, sizeof packet, 0);
 		if (size < 0 && errno == EINTR) {
 			continue;
 		}

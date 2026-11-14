@@ -3,7 +3,6 @@
 
 #include <stdbool.h>
 #include <stddef.h>
-#include <sys/socket.h>
 
 #include "input/password.h"
 
@@ -16,9 +15,6 @@ enum {
 	MESSAGE_FAILURE = 'n',
 	MESSAGE_INFO = 'i',
 	MESSAGE_ERROR = 'e',
-	// FreeBSD ends a SOCK_SEQPACKET record only at MSG_EOR and merges sends
-	// without it, so every packet is one send with these flags
-	MESSAGE_SEND = MSG_EOR | MSG_NOSIGNAL,
 };
 
 struct message_reply {

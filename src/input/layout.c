@@ -56,7 +56,10 @@ static void upper(const char *code, size_t length, char *label, size_t size) {
 	size_t n = 0;
 	for (size_t i = 0; i < length && n + 1 < size; i++) {
 		char c = code[i];
-		label[n++] = c >= 'a' && c <= 'z' ? (char)(c - 'a' + 'A') : c;
+		if (c >= 'a' && c <= 'z') {
+			c = (char)(c - 'a' + 'A');
+		}
+		label[n++] = c;
 	}
 	label[n] = '\0';
 }

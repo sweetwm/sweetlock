@@ -107,6 +107,7 @@ executable(
 	'src/auth/auth.c',
 	'src/auth/helper.c',
 	'src/auth/message.c',
+	'src/auth/packet.c',
 	'src/auth/service.c',
 	'src/background/blur.c',
 	'src/background/draw.c',

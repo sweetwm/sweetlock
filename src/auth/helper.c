@@ -18,6 +18,7 @@
 #endif
 
 #include "auth/message.h"
+#include "auth/packet.h"
 #include "auth/service.h"
 #include "input/password.h"
 #include "log.h"
@@ -62,7 +63,7 @@ static bool tell(struct conversation *conversation, char kind, const char *text,
 	char packet[MESSAGE_REPLY_MAX];
 	packet[0] = kind;
 	memcpy(packet + 1, text, length);
-	(void)send(conversation->fd, packet, length + 1, MESSAGE_SEND);
+	(void)send(conversation->fd, packet, length + 1, PACKET_SEND);
 	return true;
 }
 
@@ -199,14 +200,13 @@ static bool attempt(pam_handle_t **pam, const char *user,
 	return *pam && authenticate(*pam);
 }
 
-// MSG_TRUNC returns a packet's full size, so an oversized one is seen and
-// refused
+// an oversized request reads as longer than the buffer, and is refused
 static void serve(int fd, pam_handle_t **pam, const char *user,
 	const struct pam_conv *conv, struct conversation *conversation) {
 	struct password *password = conversation->password;
 	for (;;) {
-		ssize_t size = recv(
-			fd, password->bytes, sizeof password->bytes, MSG_TRUNC);
+		ssize_t size = packet_receive(
+			fd, password->bytes, sizeof password->bytes, 0);
 		if (size < 0 && errno == EINTR) {
 			continue;
 		}
@@ -223,7 +223,7 @@ static void serve(int fd, pam_handle_t **pam, const char *user,
 				     ? MESSAGE_SUCCESS
 				     : MESSAGE_FAILURE;
 		password_clear(password);
-		if (send(fd, &reply, sizeof reply, MESSAGE_SEND) !=
+		if (send(fd, &reply, sizeof reply, PACKET_SEND) !=
 			(ssize_t)sizeof reply) {
 			return;
 		}

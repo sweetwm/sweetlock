@@ -115,10 +115,9 @@ bool blur(uint16_t *pixels, int32_t width, int32_t height, double sigma) {
 }
 
 static uint32_t *row_of(cairo_surface_t *surface, int32_t y) {
-	return (uint32_t *)(void
-			*)(cairo_image_surface_get_data(surface) +
-			   (size_t)y * (size_t)cairo_image_surface_get_stride(
-					       surface));
+	return (uint32_t *)(cairo_image_surface_get_data(surface) +
+			    (size_t)y * (size_t)cairo_image_surface_get_stride(
+						surface));
 }
 
 // 8 bits to 16, so the blur and the upscale keep the fractions
