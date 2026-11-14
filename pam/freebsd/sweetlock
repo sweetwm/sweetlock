@@ -1,0 +1,6 @@
+#
+# PAM configuration for the Sweetlock screen locker on FreeBSD.
+# pam_unix cannot check a password for a normal user here, so this uses
+# unix-selfauth: pkg install unix-selfauth-helper.
+#
+auth include unix-selfauth
