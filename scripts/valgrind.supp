@@ -1,0 +1,13 @@
+# suppress only whole-process caches inside libraries, never our own frames
+# GObject registers its types from a constructor the dynamic linker runs at
+# load, and keeps them for the process; FreeBSD's valgrind sees possible leaks
+{
+   gobject-type-registry-at-load
+   Memcheck:Leak
+   match-leak-kinds: possible
+   fun:*alloc
+   ...
+   obj:*/libgobject-2.0.so*
+   ...
+   obj:*/ld-elf.so.1
+}

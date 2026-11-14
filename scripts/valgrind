@@ -12,9 +12,12 @@ meson setup --reconfigure build-valgrind --werror -Dbuildtype=debug
 
 ninja -C build-valgrind
 
+# the load-time stacks reach past valgrind's default depth of 12 frames
 valgrind \
 	--leak-check=full \
 	--show-leak-kinds=definite,possible \
+	--suppressions=scripts/valgrind.supp \
+	--num-callers=40 \
 	--track-origins=yes \
 	--error-exitcode=125 \
 	./build-valgrind/sweetlock --version
