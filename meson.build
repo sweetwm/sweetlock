@@ -59,6 +59,15 @@ cc.has_header_symbol(
 	required: true,
 )
 
+# FreeBSD 15: timerfd with CANCEL_ON_SET and kqueuex, checked here so an
+# older release fails at configure
+if host_machine.system() == 'freebsd'
+	cc.has_header_symbol('sys/timerfd.h', 'TFD_TIMER_CANCEL_ON_SET',
+		required: true)
+	cc.has_header_symbol('sys/event.h', 'kqueuex',
+		prefix: '#include <sys/types.h>', required: true)
+endif
+
 subdir('protocol')
 
 # vendored TOML parser: our sanitizers and fuzzer instrument it, but it is not

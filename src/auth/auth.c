@@ -3,7 +3,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <signal.h>
-#include <spawn.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -11,6 +10,12 @@
 #include <sys/timerfd.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#ifdef __FreeBSD__
+#include <limits.h>
+#include <sys/auxv.h>
+#else
+#include <spawn.h>
+#endif
 
 #include "auth/helper.h"
 #include "auth/message.h"
@@ -19,8 +24,75 @@
 
 extern char **environ;
 
+static const struct auth idle = {
+	.pid = -1,
+	.fd = -1,
+	.timer_fd = -1,
+#ifdef __FreeBSD__
+	.self_fd = -1,
+#endif
+};
+
+#ifdef __FreeBSD__
+static bool open_self(struct auth *auth) {
+	char path[PATH_MAX];
+	if (elf_aux_info(AT_EXECPATH, path, sizeof path) != 0) {
+		log_error("failed to find the running binary");
+		return false;
+	}
+	auth->self_fd = open(path, O_EXEC | O_CLOEXEC);
+	if (auth->self_fd < 0) {
+		log_error("failed to open the running binary: %m");
+		return false;
+	}
+	return true;
+}
+
+static int start_helper(
+	const struct auth *auth, int channel, char *const argv[], pid_t *pid) {
+	volatile int error = 0;
+	// NOLINTNEXTLINE(bugprone-unsafe-functions,cert-msc33-c,clang-analyzer-security.insecureAPI.vfork)
+	pid_t child = vfork();
+	if (child == 0) {
+		// NOLINTNEXTLINE(clang-analyzer-unix.Vfork)
+		if (dup2(channel, HELPER_FD) == HELPER_FD) {
+			(void)fexecve(auth->self_fd, argv, environ);
+		}
+		error = errno;
+		_exit(127);
+	}
+	if (child < 0) {
+		return errno;
+	}
+	if (error != 0) {
+		while (waitpid(child, NULL, 0) < 0 && errno == EINTR) {
+		}
+		return error;
+	}
+	*pid = child;
+	return 0;
+}
+#else
 // posix_spawn only execs, so this is safe once threads exist; the link
 // keeps naming the running binary after an upgrade replaces the file
+static int start_helper(
+	const struct auth *auth, int channel, char *const argv[], pid_t *pid) {
+	(void)auth;
+	posix_spawn_file_actions_t actions;
+	int error = posix_spawn_file_actions_init(&actions);
+	if (error != 0) {
+		return error;
+	}
+	error = posix_spawn_file_actions_adddup2(&actions, channel, HELPER_FD);
+	if (error == 0) {
+		error = posix_spawn(
+			pid, "/proc/self/exe", &actions, NULL, argv, environ);
+	}
+	posix_spawn_file_actions_destroy(&actions);
+	return error;
+}
+#endif
+
 static bool spawn(struct auth *auth) {
 	int fds[2];
 	if (socketpair(AF_UNIX, SOCK_SEQPACKET | SOCK_CLOEXEC, 0, fds) != 0) {
@@ -29,19 +101,9 @@ static bool spawn(struct auth *auth) {
 	}
 	char *const argv[] = {
 		"sweetlock", HELPER_FLAG, (char *)auth->login, NULL};
-	posix_spawn_file_actions_t actions;
-	int error = posix_spawn_file_actions_init(&actions);
-	if (error == 0) {
-		error = posix_spawn_file_actions_adddup2(
-			&actions, fds[1], HELPER_FD);
-		pid_t pid = -1;
-		if (error == 0) {
-			error = posix_spawn(&pid, "/proc/self/exe", &actions,
-				NULL, argv, environ);
-		}
-		posix_spawn_file_actions_destroy(&actions);
-		auth->pid = error == 0 ? pid : -1;
-	}
+	pid_t pid = -1;
+	int error = start_helper(auth, fds[1], argv, &pid);
+	auth->pid = error == 0 ? pid : -1;
 	close(fds[1]);
 	if (error != 0) {
 		errno = error;
@@ -96,7 +158,7 @@ static void set_notice(
 }
 
 bool auth_start(struct auth *auth, const char *login) {
-	*auth = (struct auth){.pid = -1, .fd = -1, .timer_fd = -1};
+	*auth = idle;
 	if (!login[0]) {
 		log_error("failed to look up the current user");
 		return false;
@@ -108,6 +170,11 @@ bool auth_start(struct auth *auth, const char *login) {
 		log_error("failed to create the attempt timer: %m");
 		return false;
 	}
+#ifdef __FreeBSD__
+	if (!open_self(auth)) {
+		return false;
+	}
+#endif
 	return spawn(auth);
 }
 
@@ -240,5 +307,10 @@ void auth_stop(struct auth *auth) {
 	if (auth->timer_fd >= 0) {
 		close(auth->timer_fd);
 	}
-	*auth = (struct auth){.pid = -1, .fd = -1, .timer_fd = -1};
+#ifdef __FreeBSD__
+	if (auth->self_fd >= 0) {
+		close(auth->self_fd);
+	}
+#endif
+	*auth = idle;
 }
