@@ -1,7 +1,6 @@
 #include "app/signals.h"
 
 #include <signal.h>
-#include <string.h>
 #include <sys/prctl.h>
 #include <sys/signalfd.h>
 #include <unistd.h>
@@ -54,7 +53,6 @@ enum signal_action signals_read(int fd) {
 	enum signal_action action = SIGNAL_NONE;
 	struct signalfd_siginfo info;
 	while (read(fd, &info, sizeof info) == (ssize_t)sizeof info) {
-		const char *name = sigabbrev_np((int)info.ssi_signo);
 		if (info.ssi_signo == SIGUSR1) {
 			log_info("received SIGUSR1; unlocking");
 			if (action == SIGNAL_NONE) {
@@ -63,8 +61,9 @@ enum signal_action signals_read(int fd) {
 		} else if (info.ssi_signo == SIGHUP) {
 			log_info("received SIGHUP; staying locked");
 		} else {
-			log_info("received SIG%s; exiting without unlocking",
-				name ? name : "?");
+			log_info("received %s; exiting without unlocking",
+				info.ssi_signo == SIGTERM ? "SIGTERM"
+							  : "SIGINT");
 			action = SIGNAL_EXIT;
 		}
 	}

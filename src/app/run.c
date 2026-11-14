@@ -1,7 +1,9 @@
 #include "app/app.h"
 
 #include <errno.h>
+#ifdef __GLIBC__
 #include <malloc.h>
+#endif
 #include <poll.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -181,7 +183,9 @@ static void report_locked(struct app *app) {
 // started with the lock request, so a cached background is read while the
 // compositor confirms the lock
 static void start_worker(struct app *app) {
+#ifdef __GLIBC__
 	(void)mallopt(M_MMAP_THRESHOLD, 1 << 20);
+#endif
 	worker_start(&app->worker);
 	app->content = (struct ui_content){
 		.config = app->config,

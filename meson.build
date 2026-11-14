@@ -14,7 +14,7 @@ cc = meson.get_compiler('c')
 
 add_project_arguments(
 	'-DSWEETLOCK_VERSION="' + meson.project_version() + '"',
-	# memfd_create, signalfd, timerfd and the wider Linux surface
+	# glibc declares memfd_create and close_range only with it
 	'-D_GNU_SOURCE',
 	cc.get_supported_arguments(
 		'-Wshadow',
@@ -43,7 +43,11 @@ wayland_scanner = find_program(
 )
 
 xkbcommon = dependency('xkbcommon')
-pam = dependency('pam')
+# Linux-PAM ships pam.pc, OpenPAM does not
+pam = dependency('pam', required: false)
+if not pam.found()
+	pam = cc.find_library('pam', has_headers: 'security/pam_appl.h')
+endif
 libjpeg = dependency('libjpeg')
 # IJG libjpeg installs the same libjpeg.pc but lacks libjpeg-turbo's extended
 # colour spaces
