@@ -31,6 +31,7 @@ struct conversation {
 	// texts sent in this attempt
 	int texts;
 	bool no_service;
+	bool load_failed;
 };
 
 static void free_replies(struct pam_response *replies, int count) {
@@ -61,7 +62,7 @@ static bool tell(struct conversation *conversation, char kind, const char *text,
 	char packet[MESSAGE_REPLY_MAX];
 	packet[0] = kind;
 	memcpy(packet + 1, text, length);
-	(void)send(conversation->fd, packet, length + 1, MSG_NOSIGNAL);
+	(void)send(conversation->fd, packet, length + 1, MESSAGE_SEND);
 	return true;
 }
 
@@ -83,14 +84,19 @@ static void show(
 	}
 }
 
-_Static_assert(sizeof SERVICE_MISSING - 1 <= MESSAGE_TEXT_MAX,
-	"the warning fits one text packet");
+_Static_assert(sizeof SERVICE_MISSING - 1 <= MESSAGE_TEXT_MAX &&
+		       sizeof SERVICE_BROKEN - 1 <= MESSAGE_TEXT_MAX,
+	"each warning fits one text packet");
 
-// before each attempt as well, since the locker clears it when one starts
-static void warn_missing(struct conversation *conversation) {
+// before each attempt as well, since the locker clears it when one starts,
+// a missing service is the likelier cause of a stack that will not load
+static void warn_setup(struct conversation *conversation, bool loaded) {
 	if (conversation->no_service) {
 		tell(conversation, MESSAGE_ERROR, SERVICE_MISSING,
 			sizeof SERVICE_MISSING - 1);
+	} else if (!loaded) {
+		tell(conversation, MESSAGE_ERROR, SERVICE_BROKEN,
+			sizeof SERVICE_BROKEN - 1);
 	}
 }
 
@@ -139,27 +145,28 @@ static int converse(int count, const struct pam_message **messages,
 	return PAM_SUCCESS;
 }
 
-static pam_handle_t *start(const char *user, const struct pam_conv *conv) {
+// OpenPAM reads the whole stack here, so a missing include fails it, logged
+// once, as the helper tries again before each attempt
+static pam_handle_t *load(
+	const char *user, const struct pam_conv *conv, bool *failed) {
 	pam_handle_t *pam = NULL;
-#ifdef SWEETLOCK_TEST_PAM_CONFDIR
-	log_warn("built for tests: authenticating with the PAM config in %s",
-		SWEETLOCK_TEST_PAM_CONFDIR);
-	int status = pam_start_confdir(
-		SERVICE_NAME, user, conv, SWEETLOCK_TEST_PAM_CONFDIR, &pam);
-#else
-	int status = pam_start(SERVICE_NAME, user, conv, &pam);
-#endif
-	if (status != PAM_SUCCESS) {
-		log_error("failed to start PAM: %s", pam_strerror(pam, status));
-		return NULL;
+	int status = service_start(user, conv, &pam);
+	if (status == PAM_SUCCESS) {
+		if (*failed) {
+			log_info("PAM loaded service \"" SERVICE_NAME "\"");
+		}
+		*failed = false;
+		return pam;
 	}
-	return pam;
+	if (!*failed) {
+		log_error("PAM could not load service \"" SERVICE_NAME "\": %s",
+			pam_strerror(pam, status));
+	}
+	*failed = true;
+	return NULL;
 }
 
-static bool authenticate(pam_handle_t *pam, struct conversation *conversation) {
-	conversation->answered = false;
-	conversation->texts = 0;
-	warn_missing(conversation);
+static bool authenticate(pam_handle_t *pam) {
 	int status = pam_authenticate(pam, 0);
 	if (status != PAM_SUCCESS) {
 		// a wrong password is the usual failure; others point at the
@@ -169,18 +176,33 @@ static bool authenticate(pam_handle_t *pam, struct conversation *conversation) {
 		}
 		return false;
 	}
+	// unix-selfauth on FreeBSD fails this on every unlock; not a warning
 	status = pam_setcred(pam, PAM_REFRESH_CRED);
 	if (status != PAM_SUCCESS) {
-		log_warn("PAM failed to refresh credentials: %s",
+		log_info("PAM did not refresh credentials: %s",
 			pam_strerror(pam, status));
 	}
 	return true;
 }
 
+// a stack that would not load is loaded again first, so one fixed over SSH
+// unlocks without a restart
+static bool attempt(pam_handle_t **pam, const char *user,
+	const struct pam_conv *conv, struct conversation *conversation) {
+	conversation->answered = false;
+	conversation->texts = 0;
+	if (!*pam) {
+		conversation->no_service = !service_found();
+		*pam = load(user, conv, &conversation->load_failed);
+	}
+	warn_setup(conversation, *pam != NULL);
+	return *pam && authenticate(*pam);
+}
+
 // MSG_TRUNC returns a packet's full size, so an oversized one is seen and
 // refused
-static void serve(
-	int fd, pam_handle_t *pam, struct conversation *conversation) {
+static void serve(int fd, pam_handle_t **pam, const char *user,
+	const struct pam_conv *conv, struct conversation *conversation) {
 	struct password *password = conversation->password;
 	for (;;) {
 		ssize_t size = recv(
@@ -197,11 +219,11 @@ static void serve(
 			log_error(
 				"the PAM helper received a malformed request");
 		}
-		char reply = valid && authenticate(pam, conversation)
+		char reply = valid && attempt(pam, user, conv, conversation)
 				     ? MESSAGE_SUCCESS
 				     : MESSAGE_FAILURE;
 		password_clear(password);
-		if (send(fd, &reply, sizeof reply, MSG_NOSIGNAL) !=
+		if (send(fd, &reply, sizeof reply, MESSAGE_SEND) !=
 			(ssize_t)sizeof reply) {
 			return;
 		}
@@ -283,17 +305,24 @@ _Noreturn void helper_main(const char *user) {
 		.fd = HELPER_FD,
 		.no_service = !service_found(),
 	};
+#ifdef SWEETLOCK_TEST_PAM_CONFDIR
+	log_warn("built for tests: authenticating with the PAM config in %s",
+		SWEETLOCK_TEST_PAM_CONFDIR);
+#endif
 	if (conversation.no_service) {
 		log_error(SERVICE_MISSING_LOG);
-		warn_missing(&conversation);
 	}
 	const struct pam_conv conv = {
 		.conv = converse, .appdata_ptr = &conversation};
-	pam_handle_t *pam = password ? start(user, &conv) : NULL;
+	pam_handle_t *pam = NULL;
+	if (password) {
+		pam = load(user, &conv, &conversation.load_failed);
+		warn_setup(&conversation, pam != NULL);
+		serve(HELPER_FD, &pam, user, &conv, &conversation);
+	}
 	if (pam) {
-		serve(HELPER_FD, pam, &conversation);
 		pam_end(pam, PAM_SUCCESS);
 	}
 	password_destroy(password);
-	_exit(pam ? EXIT_SUCCESS : EXIT_FAILURE);
+	_exit(password ? EXIT_SUCCESS : EXIT_FAILURE);
 }

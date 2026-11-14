@@ -180,7 +180,7 @@ bool auth_start(struct auth *auth, const char *login) {
 
 bool auth_submit(struct auth *auth, const struct password *password) {
 	size_t size = password->length + 1;
-	if (send(auth->fd, password->bytes, size, MSG_NOSIGNAL) !=
+	if (send(auth->fd, password->bytes, size, MESSAGE_SEND) !=
 		(ssize_t)size) {
 		log_error("failed to send the password to the PAM helper: %m");
 		return false;

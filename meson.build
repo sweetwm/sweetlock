@@ -165,8 +165,13 @@ executable(
 	install: true,
 )
 
+pam_service = 'pam/sweetlock'
+if host_machine.system() == 'freebsd'
+	# FreeBSD's pam_unix cannot check a password as a normal user
+	pam_service = 'pam/freebsd/sweetlock'
+endif
 install_data(
-	'pam/sweetlock',
+	pam_service,
 	install_dir: get_option('sysconfdir') / 'pam.d',
 )
 

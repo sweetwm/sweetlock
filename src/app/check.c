@@ -2,6 +2,7 @@
 
 #include <inttypes.h>
 #include <limits.h>
+#include <security/pam_appl.h>
 #include <stdlib.h>
 
 #include "auth/service.h"
@@ -50,6 +51,30 @@ static bool image_ok(const char *key, const char *configured) {
 	return false;
 }
 
+static int refuse(int count, const struct pam_message **messages,
+	struct pam_response **responses, void *data) {
+	(void)count;
+	(void)messages;
+	(void)responses;
+	(void)data;
+	return PAM_CONV_ERR;
+}
+
+// loads the stack as the helper does, without authenticating, so a missing
+// include shows here and not first on the lock screen
+static bool service_loads(void) {
+	const struct pam_conv conv = {.conv = refuse};
+	pam_handle_t *pam = NULL;
+	int status = service_start(NULL, &conv, &pam);
+	if (status != PAM_SUCCESS) {
+		log_error("PAM could not load service \"" SERVICE_NAME "\": %s",
+			pam_strerror(pam, status));
+		return false;
+	}
+	pam_end(pam, PAM_SUCCESS);
+	return true;
+}
+
 // a missing list only costs the badge its exact codes, so it warns
 static void layouts_ok(void) {
 	char path[PATH_MAX];
@@ -72,6 +97,8 @@ int app_check(const struct config *config, bool config_ok) {
 	bool ok = config_ok;
 	if (!service_found()) {
 		log_error(SERVICE_MISSING_LOG);
+		ok = false;
+	} else if (!service_loads()) {
 		ok = false;
 	}
 	if (config->avatar.enabled && config->avatar.path[0] &&
