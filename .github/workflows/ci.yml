@@ -19,12 +19,12 @@ concurrency:
 env:
   PACMAN_DEPS: >-
     base-devel git meson ninja pkgconf clang valgrind
-    wayland wayland-protocols libxkbcommon pam cairo pango libjpeg-turbo
+    wayland wayland-protocols libxkbcommon pam cairo pango libjpeg-turbo scdoc
   PACMAN_LINT_DEPS: >-
     git actionlint shellcheck
   FREEBSD_DEPS: >-
     meson ninja pkgconf
-    wayland wayland-protocols libxkbcommon cairo pango jpeg-turbo
+    wayland wayland-protocols libxkbcommon cairo pango jpeg-turbo scdoc
 
 jobs:
   lint:
