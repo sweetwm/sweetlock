@@ -1,0 +1,87 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  # re-publish assets for an existing tag without re-tagging
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  release:
+    name: Publish Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      image: archlinux:latest
+    permissions:
+      # to create the release and upload assets
+      contents: write
+    steps:
+      - name: Install dependencies
+        run: |
+          pacman -Syu --noconfirm --needed \
+            base-devel git meson ninja pkgconf \
+            wayland wayland-protocols libxkbcommon pam cairo pango \
+            libjpeg-turbo scdoc github-cli
+
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # meson dist and the generated notes need the full history
+          fetch-depth: 0
+
+      - name: Trust the workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Build
+        run: |
+          meson setup build-release --werror -Dbuildtype=release --prefix=/usr
+          ninja -C build-release
+
+      - name: Check the tag matches the version
+        run: |
+          expected="sweetlock ${GITHUB_REF_NAME#v}"
+          actual="$(./build-release/sweetlock --version)"
+          if [ "$actual" != "$expected" ]; then
+            printf 'tag %s, but the binary says "%s"\n' \
+              "$GITHUB_REF_NAME" "$actual" >&2
+            exit 1
+          fi
+
+      - name: Create source tarball
+        run: meson dist -C build-release --no-tests --formats xztar
+
+      - name: Create binary tarball
+        run: |
+          name="sweetlock-${GITHUB_REF_NAME#v}-x86_64-linux.tar.xz"
+          stage="$(mktemp -d)"
+          DESTDIR="$stage" meson install -C build-release --strip
+          test -f "$stage/usr/share/man/man5/sweetlock.5"
+          # usr/ and etc/pam.d, so it unpacks straight over /
+          tar -C "$stage" -cJf "build-release/meson-dist/$name" usr etc
+          cd build-release/meson-dist
+          sha256sum "$name" > "$name.sha256sum"
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          assets=(build-release/meson-dist/*.tar.xz
+                  build-release/meson-dist/*.tar.xz.sha256sum)
+          # a re-run replaces the assets instead of failing on the release
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" --clobber "${assets[@]}"
+          else
+            gh release create "$GITHUB_REF_NAME" \
+              --title "Sweetlock $GITHUB_REF_NAME" \
+              --generate-notes \
+              --verify-tag \
+              "${assets[@]}"
+          fi
