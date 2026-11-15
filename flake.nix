@@ -72,7 +72,7 @@
 
           meta = {
             description = "Screen locker for Wayland";
-            homepage = "https://github.com/naurissteins/sweetlock";
+            homepage = "https://github.com/sweetwm/sweetlock";
             license = lib.licenses.gpl3Plus;
             mainProgram = "sweetlock";
             platforms = lib.platforms.linux;

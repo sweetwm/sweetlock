@@ -11,10 +11,10 @@ Lightweight screen locker for Wayland compositor
 
 [< Wiki >](https://sweetwm.org/docs/sweetlock)
 
-<a href="https://github.com/user-attachments/assets/332e05bc-bfed-447a-a67d-f37195b5a471" target="_blank">
+<a href="https://github.com/user-attachments/assets/82cfc65c-4179-4437-9887-93d2e82e2ef0" target="_blank">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/332e05bc-bfed-447a-a67d-f37195b5a471" />
-    <img alt="veila-preview2" src="https://github.com/user-attachments/assets/332e05bc-bfed-447a-a67d-f37195b5a471" />
+    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/82cfc65c-4179-4437-9887-93d2e82e2ef0" />
+    <img alt="veila-preview2" src="https://github.com/user-attachments/assets/82cfc65c-4179-4437-9887-93d2e82e2ef0" />
   </picture>
 </a>
 
@@ -54,7 +54,7 @@ Add the flake to your inputs and its overlay to nixpkgs:
   inputs = {
     nixpkgs.url = "nixpkgs/nixos-26.05";
     sweetlock = {
-      url = "github:naurissteins/sweetlock";
+      url = "github:sweetwm/sweetlock";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -81,6 +81,12 @@ security.pam.services.sweetlock = {};
 > [!IMPORTANT]
 > Without the PAM service every password is refused. After rebuilding, run
 > `sweetlock --check` before your first lock.
+
+---
+
+### FreeBSD
+
+[See the FreeBSD guide](https://sweetwm.org/docs/sweetlock/freebsd)
 
 ---
 
