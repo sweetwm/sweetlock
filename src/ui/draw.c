@@ -41,7 +41,8 @@ static void draw_clock(struct ui *ui, cairo_t *cr, int32_t width) {
 	}
 	if (config->date.enabled) {
 		text_set(ui->date, clock->date);
-		draw_line(ui, cr, ui->date, width, ui_theme.date_centre);
+		draw_line(ui, cr, ui->date, width,
+			ui_theme.date_centre - ui_clock_inset(config));
 	}
 }
 
@@ -74,15 +75,14 @@ static bool draw_avatar(struct ui *ui, cairo_t *cr, int32_t width) {
 	const struct avatar *avatar = &content->avatar;
 	int32_t size = scale_physical(ui->scale, ui_theme.avatar_size);
 	int32_t x = (width - size) / 2;
-	int32_t y = scale_physical(ui->scale, ui_theme.avatar_top);
 	double radius = size / 2.0;
 	set_source(cr, content->config->theme.field);
-	cairo_arc(cr, x + radius, y + radius, radius, 0, 2 * M_PI);
+	cairo_arc(cr, x + radius, radius, radius, 0, 2 * M_PI);
 	cairo_fill(cr);
 	// the worker writes image, so read it only once the job is back
 	if (avatar->loaded && !avatar->image) {
 		set_source(cr, content->config->theme.foreground);
-		icon_person(cr, x + radius, y + radius, radius);
+		icon_person(cr, x + radius, radius, radius);
 	} else if (avatar->loaded) {
 		if (!ui->avatar) {
 			ui->avatar = round_avatar(avatar->image, size);
@@ -90,7 +90,7 @@ static bool draw_avatar(struct ui *ui, cairo_t *cr, int32_t width) {
 		if (!ui->avatar) {
 			return false;
 		}
-		cairo_set_source_surface(cr, ui->avatar, x, y);
+		cairo_set_source_surface(cr, ui->avatar, x, 0);
 		cairo_paint(cr);
 	}
 	return true;
@@ -151,12 +151,11 @@ static struct color set_entry(struct ui *ui, enum field_state state) {
 	return color;
 }
 
-static void draw_field(struct ui *ui, cairo_t *cr, const struct ui_rect *part) {
+static void draw_field(struct ui *ui, cairo_t *cr, struct ui_rect f) {
 	const struct ui_content *content = ui->content;
 	const struct config *config = content->config;
 	uint32_t scale = ui->scale;
 	double s = scale_factor(scale);
-	struct ui_rect f = ui_field_rect(config, part);
 	double left = scale_physical(scale, f.x);
 	double top = scale_physical(scale, f.y);
 	double right = scale_physical(scale, f.x + f.width);
@@ -189,7 +188,8 @@ static void draw_field(struct ui *ui, cairo_t *cr, const struct ui_rect *part) {
 }
 
 // PAM's text and the layout name are plain text, never markup
-static void draw_status(struct ui *ui, cairo_t *cr, int32_t width) {
+static void draw_status(
+	struct ui *ui, cairo_t *cr, int32_t width, int32_t field_bottom) {
 	const struct config *config = ui->content->config;
 	const char *text = NULL;
 	switch (status_line(ui->content, &text)) {
@@ -209,7 +209,7 @@ static void draw_status(struct ui *ui, cairo_t *cr, int32_t width) {
 	}
 	text_set(ui->status, text);
 	draw_line(ui, cr, ui->status, width,
-		ui_theme.status_centre - ui_login_skip(config));
+		field_bottom + ui_theme.status_offset);
 }
 
 static bool draw_login(
@@ -220,10 +220,11 @@ static bool draw_login(
 	}
 	if (config->username.enabled) {
 		set_source(cr, config->theme.foreground);
-		draw_line(ui, cr, ui->name, width, ui_theme.name_centre);
+		draw_line(ui, cr, ui->name, width, ui_name_centre(config));
 	}
-	draw_field(ui, cr, rect);
-	draw_status(ui, cr, width);
+	struct ui_rect field = ui_field_rect(config, rect);
+	draw_field(ui, cr, field);
+	draw_status(ui, cr, width, field.y + field.height);
 	return true;
 }
 
