@@ -27,20 +27,58 @@ static int32_t round_up(int32_t value, int32_t step) {
 	return (value + step - 1) / step * step;
 }
 
-// with no avatar and no name, the clock takes their place above the field
-static bool clock_centred(const struct config *config) {
-	return !config->avatar.enabled && !config->username.enabled;
+int32_t ui_clock_inset(const struct config *config) {
+	return config->clock.enabled
+		       ? 0
+		       : ui_theme.date_centre - ui_theme.date_size;
 }
 
-int32_t ui_login_skip(const struct config *config) {
-	return clock_centred(config) ? ui_theme.field_top : 0;
+int32_t ui_name_centre(const struct config *config) {
+	int32_t top = config->avatar.enabled
+			      ? ui_theme.avatar_size + ui_theme.login_gap
+			      : 0;
+	return top + ui_theme.name_size / 2;
 }
 
-static int32_t centred_lift(void) {
-	int32_t clock_top = ui_theme.name_centre - ui_theme.date_centre +
-			    ui_theme.time_centre -
-			    (int32_t)ui_theme.time_size / 2;
-	return (clock_top - ui_theme.avatar_top) / 2;
+static int32_t field_top(const struct config *config) {
+	if (config->username.enabled) {
+		return ui_name_centre(config) + ui_theme.name_size / 2 +
+		       ui_theme.login_gap;
+	}
+	return config->avatar.enabled
+		       ? ui_theme.avatar_size + ui_theme.login_gap
+		       : 0;
+}
+
+static int32_t clock_height(const struct config *config) {
+	if (config->date.enabled) {
+		return ui_theme.clock_height - ui_clock_inset(config);
+	}
+	return ui_theme.time_height;
+}
+
+static int32_t clock_text_top(const struct config *config) {
+	return config->clock.enabled
+		       ? ui_theme.time_centre - ui_theme.time_size / 2
+		       : ui_theme.date_size / 2;
+}
+
+static void place_column(const struct config *config, int32_t height,
+	int32_t step, int32_t login_body, int32_t clock_box, int32_t *clock,
+	int32_t *login) {
+	bool field_only = !config->avatar.enabled && !config->username.enabled;
+	int32_t gap =
+		field_only ? ui_theme.clock_field_gap : ui_theme.clock_gap;
+	if (!field_only && *login >= *clock + clock_box + gap) {
+		return;
+	}
+	int32_t spare = height - clock_box - login_body;
+	if (spare / 3 < gap) {
+		gap = spare > 0 ? spare / 3 : 0;
+	}
+	gap = snap(gap, step);
+	*clock = snap((spare - gap - clock_text_top(config)) / 2, step);
+	*login = *clock + clock_box + gap;
 }
 
 bool ui_place(const struct ui_content *content, enum ui_part part,
@@ -68,31 +106,24 @@ bool ui_place(const struct ui_content *content, enum ui_part part,
 	if (w == 0) {
 		w = step;
 	}
-	int32_t login = height / 2 - ui_theme.login_above;
-	int32_t clock = ui_theme.clock_top;
-	if (clock_centred(config)) {
-		login -= centred_lift();
-		int32_t centred =
-			login + ui_theme.name_centre - ui_theme.date_centre;
-		clock = centred > clock ? centred : clock;
+	// the status line has buffer space below the field so it never moves
+	// the column
+	int32_t login_body = field_top(config) + ui_theme.field_height;
+	int32_t login = snap((height - login_body) / 2, step);
+	int32_t clock = snap(ui_theme.clock_top + ui_clock_inset(config), step);
+	int32_t clock_box = round_up(clock_height(config), step);
+	if (ui_shows(content, UI_CLOCK)) {
+		place_column(config, height, step, login_body, clock_box,
+			&clock, &login);
 	}
-	int32_t skip = ui_login_skip(config);
-	login += skip;
-	// on a short output the login part moves down rather than cover the
-	// date
-	int32_t clock_bottom =
-		snap(clock, step) + round_up(ui_theme.clock_height, step);
-	if (login < clock_bottom) {
-		login = clock_bottom;
-	}
-	int32_t y = part == UI_CLOCK ? clock : login;
-	int32_t h = part == UI_CLOCK ? ui_theme.clock_height
-				     : ui_theme.login_height - skip;
 	*rect = (struct ui_rect){
 		.x = snap((width - w) / 2, step),
-		.y = snap(y, step),
+		.y = part == UI_CLOCK ? clock : login,
 		.width = w,
-		.height = round_up(h, step),
+		.height = part == UI_CLOCK
+				  ? clock_box
+				  : round_up(login_body + ui_theme.status_space,
+					    step),
 	};
 	return true;
 }
@@ -104,7 +135,7 @@ struct ui_rect ui_field_rect(
 				: ui_theme.field_width;
 	return (struct ui_rect){
 		.x = (part->width - width) / 2,
-		.y = ui_theme.field_top - ui_login_skip(config),
+		.y = field_top(config),
 		.width = width,
 		.height = ui_theme.field_height,
 	};
