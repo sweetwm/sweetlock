@@ -63,20 +63,26 @@ static int32_t clock_text_top(const struct config *config) {
 		       : ui_theme.date_size / 2;
 }
 
-static void place_column(const struct config *config, int32_t height,
+static void place_clock_and_login(const struct config *config, int32_t height,
 	int32_t step, int32_t login_body, int32_t clock_box, int32_t *clock,
 	int32_t *login) {
 	bool field_only = !config->avatar.enabled && !config->username.enabled;
 	int32_t gap =
 		field_only ? ui_theme.clock_field_gap : ui_theme.clock_gap;
-	if (!field_only && *login >= *clock + clock_box + gap) {
-		return;
-	}
 	int32_t spare = height - clock_box - login_body;
 	if (spare / 3 < gap) {
 		gap = spare > 0 ? spare / 3 : 0;
 	}
 	gap = snap(gap, step);
+	if (!field_only) {
+		// keep the login centred by moving the clock up first
+		int32_t latest = *login - clock_box - gap;
+		if (*clock > latest) {
+			*clock = latest > 0 ? latest : 0;
+			*login = *clock + clock_box + gap;
+		}
+		return;
+	}
 	*clock = snap((spare - gap - clock_text_top(config)) / 2, step);
 	*login = *clock + clock_box + gap;
 }
@@ -113,8 +119,8 @@ bool ui_place(const struct ui_content *content, enum ui_part part,
 	int32_t clock = snap(ui_theme.clock_top + ui_clock_inset(config), step);
 	int32_t clock_box = round_up(clock_height(config), step);
 	if (ui_shows(content, UI_CLOCK)) {
-		place_column(config, height, step, login_body, clock_box,
-			&clock, &login);
+		place_clock_and_login(config, height, step, login_body,
+			clock_box, &clock, &login);
 	}
 	*rect = (struct ui_rect){
 		.x = snap((width - w) / 2, step),
