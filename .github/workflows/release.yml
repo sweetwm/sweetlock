@@ -42,6 +42,9 @@ jobs:
 
       - name: Build
         run: |
+          # Arch's makepkg flags (full RELRO, fortify), as a makepkg build gets
+          source /etc/makepkg.conf
+          export CFLAGS LDFLAGS
           meson setup build-release --werror -Dbuildtype=release --prefix=/usr
           ninja -C build-release
 
