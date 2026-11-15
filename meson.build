@@ -176,6 +176,8 @@ install_data(
 	install_dir: get_option('sysconfdir') / 'pam.d',
 )
 
+subdir('doc')
+
 # test/ is private and never pushed
 if fs.exists('test/meson.build')
 	subdir('test')

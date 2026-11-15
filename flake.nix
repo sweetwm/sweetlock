@@ -21,6 +21,7 @@
           ninja,
           pkg-config,
           wayland-scanner,
+          scdoc,
           versionCheckHook,
           wayland,
           wayland-protocols,
@@ -45,6 +46,7 @@
               ./src
               ./protocol
               ./pam
+              ./doc
               ./third_party
             ];
           };
@@ -56,6 +58,7 @@
             ninja
             pkg-config
             wayland-scanner
+            scdoc
           ];
           buildInputs = [
             wayland
@@ -100,6 +103,7 @@
             wayland
             wayland-protocols
             wayland-scanner
+            scdoc
             libxkbcommon
             linux-pam
             libjpeg
