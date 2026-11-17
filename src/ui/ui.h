@@ -64,6 +64,8 @@ struct ui {
 	PangoLayout *date;
 	PangoLayout *name;
 	PangoLayout *entry;
+	// the bullets, larger and spaced apart
+	PangoLayout *mask;
 	PangoLayout *status;
 	PangoLayout *badge;
 	// the time's digits at this scale, measured on first draw

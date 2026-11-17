@@ -41,6 +41,16 @@ void text_set_font(PangoLayout *layout, const char *family, PangoWeight weight,
 	pango_layout_set_width(layout, (int)(width * PANGO_SCALE));
 }
 
+void text_set_spacing(PangoLayout *layout, double pixels) {
+	// a copy, so the layout sees a new list and reshapes
+	PangoAttrList *attributes =
+		pango_attr_list_copy(pango_layout_get_attributes(layout));
+	pango_attr_list_change(attributes,
+		pango_attr_letter_spacing_new((int)(pixels * PANGO_SCALE)));
+	pango_layout_set_attributes(layout, attributes);
+	pango_attr_list_unref(attributes);
+}
+
 void text_set(PangoLayout *layout, const char *text) {
 	if (strcmp(pango_layout_get_text(layout), text) != 0) {
 		pango_layout_set_text(layout, text, -1);

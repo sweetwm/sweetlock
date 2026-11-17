@@ -34,6 +34,8 @@ struct ui_theme {
 	int32_t date_size;
 	int32_t name_size;
 	double entry_size;
+	double mask_size;
+	double mask_spacing;
 	double status_size;
 	double badge_text_size;
 	double outline;

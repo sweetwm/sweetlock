@@ -20,6 +20,9 @@ PangoLayout *text_layout_create(void);
 void text_set_font(PangoLayout *layout, const char *family, PangoWeight weight,
 	double pixels, double width);
 
+// extra room after each character
+void text_set_spacing(PangoLayout *layout, double pixels);
+
 // sets the text only when it differs, so an unchanged layout stays shaped
 void text_set(PangoLayout *layout, const char *text);
 

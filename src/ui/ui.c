@@ -39,6 +39,8 @@ const struct ui_theme ui_theme = {
 	.date_size = 18,
 	.name_size = 28,
 	.entry_size = 17,
+	.mask_size = 24,
+	.mask_spacing = 3,
 	.status_size = 15,
 	.badge_text_size = 15,
 	.outline = 1.5,
@@ -113,6 +115,9 @@ static void set_fonts(struct ui *ui) {
 		ui_theme.name_size * s, ui_theme.name_width * s);
 	text_set_font(ui->entry, font, PANGO_WEIGHT_NORMAL,
 		ui_theme.entry_size * s, entry_width(config) * s);
+	text_set_font(ui->mask, font, PANGO_WEIGHT_NORMAL,
+		ui_theme.mask_size * s, entry_width(config) * s);
+	text_set_spacing(ui->mask, ui_theme.mask_spacing * s);
 	// PAM's lines run longer than the field
 	text_set_font(ui->status, font, PANGO_WEIGHT_NORMAL,
 		ui_theme.status_size * s, ui_theme.width * s);
@@ -133,11 +138,12 @@ struct ui *ui_create(const struct ui_content *content, uint32_t scale) {
 		.date = text_layout_create(),
 		.name = text_layout_create(),
 		.entry = text_layout_create(),
+		.mask = text_layout_create(),
 		.status = text_layout_create(),
 		.badge = text_layout_create(),
 	};
-	if (!ui->time || !ui->date || !ui->name || !ui->entry || !ui->status ||
-		!ui->badge) {
+	if (!ui->time || !ui->date || !ui->name || !ui->entry || !ui->mask ||
+		!ui->status || !ui->badge) {
 		log_error("failed to create the UI's text layouts");
 		ui_destroy(ui);
 		return NULL;
@@ -160,8 +166,8 @@ void ui_destroy(struct ui *ui) {
 	if (!ui) {
 		return;
 	}
-	PangoLayout *layouts[] = {
-		ui->time, ui->date, ui->name, ui->entry, ui->status, ui->badge};
+	PangoLayout *layouts[] = {ui->time, ui->date, ui->name, ui->entry,
+		ui->mask, ui->status, ui->badge};
 	for (size_t i = 0; i < sizeof layouts / sizeof layouts[0]; i++) {
 		if (layouts[i]) {
 			g_object_unref(layouts[i]);
