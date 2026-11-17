@@ -167,9 +167,15 @@ static void submit(struct input *input) {
 	password_clear(input->password);
 }
 
-// a repeat never submits, so a held Enter is one attempt
-static enum key_action handle(struct input *input, struct keyboard *keyboard,
-	uint32_t key, bool repeat) {
+static bool edits(enum key_action action) {
+	return action == KEY_TEXT || action == KEY_BACKSPACE ||
+	       action == KEY_CLEAR;
+}
+
+// true while the key should repeat: a repeat never submits, so a held Enter
+// is one attempt, and an edit that changed nothing ends it
+static bool handle(struct input *input, struct keyboard *keyboard, uint32_t key,
+	bool repeat) {
 	char text[KEY_TEXT_SIZE];
 	enum key_action action =
 		keyboard_translate(keyboard, key, text, sizeof text);
@@ -201,12 +207,7 @@ static enum key_action handle(struct input *input, struct keyboard *keyboard,
 	}
 	explicit_bzero(text, sizeof text);
 	input->changed |= changed;
-	return action;
-}
-
-static bool edits(enum key_action action) {
-	return action == KEY_TEXT || action == KEY_BACKSPACE ||
-	       action == KEY_CLEAR;
+	return changed && edits(action);
 }
 
 void input_touch(struct input *input) {
@@ -269,7 +270,7 @@ void input_press(struct input *input, struct keyboard *keyboard, uint32_t key) {
 		load_compose(input);
 	}
 	// a modifier leaves the held key repeating
-	if (edits(handle(input, keyboard, key, false))) {
+	if (handle(input, keyboard, key, false)) {
 		start_repeat(input, keyboard, key);
 	}
 }
@@ -294,8 +295,7 @@ void input_repeat(struct input *input) {
 		!input->repeat_keyboard) {
 		return;
 	}
-	if (!edits(handle(
-		    input, input->repeat_keyboard, input->repeat_key, true))) {
+	if (!handle(input, input->repeat_keyboard, input->repeat_key, true)) {
 		stop_repeat(input);
 	}
 }
