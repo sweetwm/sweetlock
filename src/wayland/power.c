@@ -14,7 +14,13 @@ static void power_mode(
 	void *data, struct zwlr_output_power_v1 *power, uint32_t mode) {
 	(void)power;
 	struct output *output = data;
-	output->power_off = mode == ZWLR_OUTPUT_POWER_V1_MODE_OFF;
+	bool off = mode == ZWLR_OUTPUT_POWER_V1_MODE_OFF;
+	// power_set moves power_off before its echo, so this is someone else
+	// turning a screen on, a wake that restarts the idle timer
+	if (output->power_off && !off) {
+		input_wakes(output->display->input);
+	}
+	output->power_off = off;
 	power_update(output->display);
 }
 

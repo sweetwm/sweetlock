@@ -140,7 +140,8 @@ the password field.
 *screen_off.timeout*
 	Seconds without input before every output powers off, up to 3600.
 	Default _0_, never. A key or click powers them back on and is not typed.
-	Unlocking powers them on too. Needs the compositor's
+	Unlocking powers them on too. If another tool powers them on, the
+	timeout starts over. Needs the compositor's
 	_wlr-output-power-management-unstable-v1_.
 
 # THEME
