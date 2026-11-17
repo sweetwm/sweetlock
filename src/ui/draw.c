@@ -120,18 +120,24 @@ static const char *dots(struct ui *ui, const struct password *password) {
 }
 
 // the revealed password is set as plain text, never as markup
-static struct color set_entry(struct ui *ui, enum field_state state) {
+static PangoLayout *set_entry(
+	struct ui *ui, enum field_state state, struct color *color) {
 	const struct config *config = ui->content->config;
 	const struct input *input = ui->content->input;
+	PangoLayout *layout = ui->entry;
 	const char *text = config->input.placeholder;
-	struct color color = config->theme.foreground;
+	*color = config->theme.foreground;
 	PangoEllipsizeMode mode = PANGO_ELLIPSIZE_END;
 	switch (state) {
 	case FIELD_IDLE:
 		break;
 	case FIELD_TYPING:
-		text = input->revealed ? input->password->bytes
-				       : dots(ui, input->password);
+		if (input->revealed) {
+			text = input->password->bytes;
+		} else {
+			layout = ui->mask;
+			text = dots(ui, input->password);
+		}
 		// typing happens at the end, so the start gives way
 		mode = PANGO_ELLIPSIZE_START;
 		break;
@@ -139,16 +145,16 @@ static struct color set_entry(struct ui *ui, enum field_state state) {
 		// PAM's prompt keeps the status line, so the hint goes here
 		text = ui->content->auth->cancellable ? "Press Escape to cancel"
 						      : "Checking\xe2\x80\xa6";
-		color = config->theme.muted;
+		*color = config->theme.muted;
 		break;
 	case FIELD_FAILED:
 		text = "Wrong password";
-		color = config->theme.error;
+		*color = config->theme.error;
 		break;
 	}
-	pango_layout_set_ellipsize(ui->entry, mode);
-	text_set(ui->entry, text);
-	return color;
+	pango_layout_set_ellipsize(layout, mode);
+	text_set(layout, text);
+	return layout;
 }
 
 static void draw_field(struct ui *ui, cairo_t *cr, struct ui_rect f) {
@@ -177,8 +183,10 @@ static void draw_field(struct ui *ui, cairo_t *cr, struct ui_rect f) {
 		cairo_set_line_width(cr, line);
 		cairo_stroke(cr);
 	}
-	set_source(cr, set_entry(ui, state));
-	text_draw(cr, ui->entry, left + ui_theme.field_padding * s,
+	struct color color;
+	PangoLayout *entry = set_entry(ui, state, &color);
+	set_source(cr, color);
+	text_draw(cr, entry, left + ui_theme.field_padding * s,
 		(top + bottom) / 2);
 	if (config->input.reveal_toggle) {
 		set_source(cr, config->theme.muted);

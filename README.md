@@ -4,7 +4,7 @@
 
 ![GitHub last commit](https://img.shields.io/github/last-commit/sweetwm/sweetlock?style=for-the-badge&labelColor=181825&color=a6e3a1)
 ![GitHub repo size](https://img.shields.io/github/repo-size/sweetwm/sweetlock?style=for-the-badge&labelColor=181825&color=d3bfe6)
-![AUR Version](https://img.shields.io/aur/version/sweetshot-bin?style=for-the-badge&labelColor=181825&color=b4befe)
+![AUR Version](https://img.shields.io/aur/version/sweetlock-bin?style=for-the-badge&labelColor=181825&color=b4befe)
 ![GitHub Repo stars](https://img.shields.io/github/stars/sweetwm/sweetlock?style=for-the-badge&labelColor=181825&color=f9e2af)
 
 Lightweight screen locker for Wayland compositor
